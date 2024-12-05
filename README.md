@@ -26,7 +26,7 @@ testing.
 When evaluating the completed task, we will first look at the result (correctness of generation/sorting
 and running time), and secondly, at how the candidate writes the code. Programming language: C#.
 # Solution structure
-The solution implies support for sorting very large files with very long entries using a minimum amount of RAM.
+The solution implies support for sorting very large files with very long entries using a minimum amount of RAM and in a minimum amount of time.
 ## Creator
 Executable file project that generates files with unsorted data. To run, you need to provide a configuration file of the following type:
 ```json

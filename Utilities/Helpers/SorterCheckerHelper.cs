@@ -17,8 +17,10 @@ public static class SorterCheckerHelper
     {
         SorterCheckerHelper.ValidateSotringOptions(options);
         SorterCheckerHelper.CheckEncodingBom(options);
-        SorterCheckerHelper.CheckRowsOrder(options);
-        SorterCheckerHelper.CheckRowsAvailability(options);
+        SorterCheckerHelper.CheckRowsCount(options, out var source, out var target);
+        SorterCheckerHelper.CheckRowsOrder(options, target);
+        SorterCheckerHelper.CheckRowsAvailability(options, source, target);
+        SorterCheckerHelper.CheckRowsOccurrences(options, source, target);
     }
 
     private static void ValidateSotringOptions(SorterOptions options)
@@ -55,60 +57,101 @@ public static class SorterCheckerHelper
         Console.WriteLine("Encoding BOM is OK.");
     }
 
-    private static void CheckRowsOrder(SorterOptions options)
+    private static void CheckRowsCount(SorterOptions options, out LongFileIndex source, out LongFileIndex target)
     {
-        var indexerOptions = new IndexerOptions()
+        var targetOptions = new IndexerOptions()
         {
             SourceFilePath = options.TargetFilePath,
             SourceEncoding = Encoding.GetEncoding(options.SourceEncodingName),
             IndexFilePath = Path.Combine(options.ProcessingTemporaryFolder, $"index_{Guid.NewGuid()}.txt")
         };
 
-        using var longFileIndex = new LongFileIndex(indexerOptions, true, true);
-        var comparer = new IndexBlockComparer();
-        var violationIndex = longFileIndex.IsSorted(0, longFileIndex.LongCount(), comparer);
+        target = new LongFileIndex(targetOptions, true, true);
 
-        const string exceptionMessage = "Looks like target file was not sorted properly at row {0}.";
-        if (0 <= violationIndex) throw new IOException(string.Format(exceptionMessage, violationIndex + 1));
-        Console.WriteLine("Rows order in sorted file is OK.");
-    }
-
-    private static void CheckRowsAvailability(SorterOptions options)
-    {
-        var indexerOptionsSource = new IndexerOptions()
+        var sourceOptions = new IndexerOptions()
         {
             SourceFilePath = options.SourceFilePath,
             SourceEncoding = Encoding.GetEncoding(options.SourceEncodingName),
             IndexFilePath = Path.Combine(options.ProcessingTemporaryFolder, $"index_{Guid.NewGuid()}.txt")
         };
 
-        using var fileIndexSource = new LongFileIndex(indexerOptionsSource, true, true);
+        source = new LongFileIndex(sourceOptions, true, true);
 
-        var indexerOptionTarget = new IndexerOptions()
-        {
-            SourceFilePath = options.TargetFilePath,
-            SourceEncoding = Encoding.GetEncoding(options.SourceEncodingName),
-            IndexFilePath = Path.Combine(options.ProcessingTemporaryFolder, $"index_{Guid.NewGuid()}.txt")
-        };
+        const string exceptionMessage = "Looks like source and target file have different rows count.";
+        if (target.LongCount() != source.LongCount()) throw new IOException(exceptionMessage);
+        Console.WriteLine("Rows count is OK.");
+    }
 
-        using var fileIndexTarget = new LongFileIndex(indexerOptionTarget, true, true);
+    private static void CheckRowsOrder(SorterOptions options, LongFileIndex target)
+    {
+        var violationIndex = target.IsSorted(0, target.LongCount(), new IndexBlockComparer());
+        const string exceptionMessage = "Looks like target file was not sorted properly at row {0}.";
+        if (0 <= violationIndex) throw new IOException(string.Format(exceptionMessage, violationIndex + 1));
+        Console.WriteLine("Rows order is OK.");
+    }
 
-        if (fileIndexSource.LongCount() != fileIndexTarget.LongCount())
-            throw new Exception("Looks like source and target file have different rows count.");
-
+    private static void CheckRowsAvailability(SorterOptions options, LongFileIndex source, LongFileIndex target)
+    {
         var comparer = new IndexBlockComparer();
 
-        for (long i = 0; i < fileIndexSource.LongCount(); ++i)
+        for (long i = 0; i < source.LongCount(); ++i)
         {
-            var j = (fileIndexTarget as ILargeList<IndexBlock>).BinarySearch(
+            var j = (target as ILargeList<IndexBlock>).BinarySearch(
                 0,
-                fileIndexTarget.LongCount(),
-                fileIndexSource[i],
+                target.LongCount(),
+                source[i],
                 comparer);
             if (j < 0)
                 throw new Exception($"Looks like target file does not contain row number {i + 1} from source file.");
         }
 
-        Console.WriteLine("Rows availability in sorted file is OK.");
+        Console.WriteLine("Rows availability is OK.");
+    }
+
+    private static void CheckRowsOccurrences(SorterOptions options, LongFileIndex source, LongFileIndex target)
+    {
+        var comparer = new IndexBlockComparer();
+        (source as ILargeList<IndexBlock>).Sort(0, source.LongCount(), comparer);
+
+        var sourceIndex = 0;
+        var targetIndex = 0;
+
+        while((sourceIndex < source.LongCount()) && (targetIndex < target.LongCount()))
+        {
+            var sourceElement = source[sourceIndex];
+            var sourceEnd = sourceIndex + 1;
+
+            while (sourceEnd < source.LongCount())
+            {
+                if (comparer.Compare(sourceElement, source[sourceEnd]) != 0) break;
+                ++sourceEnd;
+            }
+
+            var targetElement = target[targetIndex];
+            var targetEnd = targetIndex + 1;
+
+            while (targetEnd < target.LongCount())
+            {
+                if (comparer.Compare(targetElement, target[targetEnd]) != 0) break;
+                ++targetEnd;
+            }
+
+            const string messageAvailabilityException = "Looks like target contains row number {0}" +
+                " that is not present in source.";
+
+            if (comparer.Compare(sourceElement, targetElement) != 0)
+                throw new Exception(string.Format(messageAvailabilityException, targetIndex + 1));
+
+            const string messageOccurrencesException = "Looks like target contains row number {0}" +
+                " which has a different count of occurrences in source.";
+
+            if ((sourceEnd - sourceIndex) != (targetEnd - targetIndex))
+                throw new Exception(string.Format(messageOccurrencesException, targetIndex + 1));
+
+            sourceIndex = sourceEnd;
+            targetIndex = targetEnd;
+        }
+
+        Console.WriteLine("Rows occurrences is OK.");
     }
 }

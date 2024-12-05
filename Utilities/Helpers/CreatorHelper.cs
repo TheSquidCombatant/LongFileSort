@@ -98,7 +98,10 @@ public static class CreatorHelper
                 var digit = options.NumberPartDigits[index];
                 if (PredefinedConstants.NumberPartForbiddenDuplicateSymbols.Contains(digit) && (previousDigit == digit)) continue;
                 if (isFirstDigit && PredefinedConstants.NumberPartForbiddenFirstSymbols.Contains(digit)) continue;
+
                 streamWriter.Write(digit);
+                if (streamWriter.BaseStream.Position > (options.SourceSizeBytes / 2)) break;
+
                 previousDigit = digit;
                 isFirstDigit = false;
                 ++digitsCount;
@@ -119,7 +122,10 @@ public static class CreatorHelper
                 var symbol = options.StringPartSymbols[index];
                 if (PredefinedConstants.StringPartForbiddenDuplicateSymbols.Contains(symbol) && (previousSymbol == symbol)) continue;
                 if (isFirstSymbol && PredefinedConstants.StringPartForbiddenFirstSymbols.Contains(symbol)) continue;
+
                 streamWriter.Write(isFirstSymbol ? char.ToUpper(symbol) : symbol);
+                if (streamWriter.BaseStream.Position > (options.SourceSizeBytes / 2)) break;
+
                 previousSymbol = symbol;
                 isFirstSymbol = false;
                 ++symbolsCount;
@@ -155,7 +161,10 @@ public static class CreatorHelper
                 var digit = options.NumberPartDigits[index];
                 if (PredefinedConstants.NumberPartForbiddenDuplicateSymbols.Contains(digit) && (previousDigit == digit)) continue;
                 if (isFirstDigit && PredefinedConstants.NumberPartForbiddenFirstSymbols.Contains(digit)) continue;
+
                 streamWriter.Write(digit);
+                if (streamWriter.BaseStream.Position > options.SourceSizeBytes) break;
+
                 previousDigit = digit;
                 isFirstDigit = false;
                 ++digitsCount;
@@ -179,7 +188,10 @@ public static class CreatorHelper
                 var symbol = options.StringPartSymbols[index];
                 if (PredefinedConstants.StringPartForbiddenDuplicateSymbols.Contains(symbol) && (previousSymbol == symbol)) continue;
                 if (isFirstSymbol && PredefinedConstants.StringPartForbiddenFirstSymbols.Contains(symbol)) continue;
+
                 streamWriter.Write(isFirstSymbol ? char.ToUpper(symbol) : symbol);
+                if (streamWriter.BaseStream.Position > options.SourceSizeBytes) break;
+
                 previousSymbol = symbol;
                 isFirstSymbol = false;
                 ++symbolsCount;
