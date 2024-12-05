@@ -1,0 +1,13 @@
+{
+  "SourceFilePath": "source_100_gb_short_strings.txt",
+  "SourceEncodingName": "UTF-8",
+  "SourceSizeBytes": 107374182400,
+  "SourceOutputWithBom": false,
+  "ProcessingTemporaryFolder": "temp",
+  "NumberPartDigits": "0123456789",
+  "NumberPartLength": 9,
+  "NumberPartLengthVariation": 0,
+  "StringPartSymbols": " abcdefghijklmnopqrstuvwxyz",
+  "StringPartLength": 1024,
+  "StringPartLengthVariation": 0
+}

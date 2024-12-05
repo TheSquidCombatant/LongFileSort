@@ -1,0 +1,81 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35327.3
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Creator", "Creator\Creator.csproj", "{7D56258E-B6A6-434A-900C-D8B4D07743F8}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Creator.Checker", "Creator.Checker\Creator.Checker.csproj", "{30ABE73D-BC3B-4BD3-9F00-57E0389F9BD5}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sorter", "Sorter\Sorter.csproj", "{737FC4CD-F0B4-4F4D-BC6E-695CBF654314}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sorter.Checker", "Sorter.Checker\Sorter.Checker.csproj", "{9B2AF3D7-721A-4467-8B4E-7D731E90B584}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Utilities", "Utilities\Utilities.csproj", "{C7EE2D3F-3813-4906-B5EC-D7B47C93C3D0}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{C4239520-4286-4E0F-859A-7C4DF493E265}"
+	ProjectSection(SolutionItems) = preProject
+		readme.md = readme.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Presets", "Presets", "{B7CD65CD-4052-45DA-8D72-5FF7C0503ECF}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Creator", "Creator", "{E255E340-0606-4CFA-8163-236BF782EB77}"
+	ProjectSection(SolutionItems) = preProject
+		Presets\Creator\preset_001_gb_long_strings.json = Presets\Creator\preset_001_gb_long_strings.json
+		Presets\Creator\preset_001_gb_short_strings.json = Presets\Creator\preset_001_gb_short_strings.json
+		Presets\Creator\preset_010_gb_long_strings.json = Presets\Creator\preset_010_gb_long_strings.json
+		Presets\Creator\preset_010_gb_short_strings.json = Presets\Creator\preset_010_gb_short_strings.json
+		Presets\Creator\preset_100_gb_long_strings.json = Presets\Creator\preset_100_gb_long_strings.json
+		Presets\Creator\preset_100_gb_short_strings.json = Presets\Creator\preset_100_gb_short_strings.json
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Sorter", "Sorter", "{07F40D4C-8BD9-4D9A-9638-7240C33AB9F5}"
+	ProjectSection(SolutionItems) = preProject
+		Presets\Sorter\preset_001_gb_long_strings.json = Presets\Sorter\preset_001_gb_long_strings.json
+		Presets\Sorter\preset_001_gb_short_strings.json = Presets\Sorter\preset_001_gb_short_strings.json
+		Presets\Sorter\preset_010_gb_long_strings.json = Presets\Sorter\preset_010_gb_long_strings.json
+		Presets\Sorter\preset_010_gb_short_strings.json = Presets\Sorter\preset_010_gb_short_strings.json
+		Presets\Sorter\preset_100_gb_long_strings.json = Presets\Sorter\preset_100_gb_long_strings.json
+		Presets\Sorter\preset_100_gb_short_strings.json = Presets\Sorter\preset_100_gb_short_strings.json
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7D56258E-B6A6-434A-900C-D8B4D07743F8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7D56258E-B6A6-434A-900C-D8B4D07743F8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7D56258E-B6A6-434A-900C-D8B4D07743F8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7D56258E-B6A6-434A-900C-D8B4D07743F8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{30ABE73D-BC3B-4BD3-9F00-57E0389F9BD5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{30ABE73D-BC3B-4BD3-9F00-57E0389F9BD5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{30ABE73D-BC3B-4BD3-9F00-57E0389F9BD5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{30ABE73D-BC3B-4BD3-9F00-57E0389F9BD5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{737FC4CD-F0B4-4F4D-BC6E-695CBF654314}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{737FC4CD-F0B4-4F4D-BC6E-695CBF654314}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{737FC4CD-F0B4-4F4D-BC6E-695CBF654314}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{737FC4CD-F0B4-4F4D-BC6E-695CBF654314}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9B2AF3D7-721A-4467-8B4E-7D731E90B584}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9B2AF3D7-721A-4467-8B4E-7D731E90B584}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9B2AF3D7-721A-4467-8B4E-7D731E90B584}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9B2AF3D7-721A-4467-8B4E-7D731E90B584}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C7EE2D3F-3813-4906-B5EC-D7B47C93C3D0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C7EE2D3F-3813-4906-B5EC-D7B47C93C3D0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C7EE2D3F-3813-4906-B5EC-D7B47C93C3D0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C7EE2D3F-3813-4906-B5EC-D7B47C93C3D0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{B7CD65CD-4052-45DA-8D72-5FF7C0503ECF} = {C4239520-4286-4E0F-859A-7C4DF493E265}
+		{E255E340-0606-4CFA-8163-236BF782EB77} = {B7CD65CD-4052-45DA-8D72-5FF7C0503ECF}
+		{07F40D4C-8BD9-4D9A-9638-7240C33AB9F5} = {B7CD65CD-4052-45DA-8D72-5FF7C0503ECF}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C1AB3938-ED17-4D18-9484-430C2705E5C3}
+	EndGlobalSection
+EndGlobal
