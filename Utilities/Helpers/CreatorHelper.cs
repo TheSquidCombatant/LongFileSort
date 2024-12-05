@@ -82,7 +82,6 @@ public static class CreatorHelper
         {
             var currentStartSeed = (randomStartSeed + createdRowsCount) % int.MaxValue;
             random = new Random((int)currentStartSeed);
-            ++createdRowsCount;
 
             var digitsCount = 0;
             var isFirstDigit = true;
@@ -108,6 +107,7 @@ public static class CreatorHelper
             }
             streamWriter.Write(PredefinedConstants.SourcePartsDelimiter);
 
+            random = new Random((int)currentStartSeed);
             var symbolsCount = 0;
             var isFirstSymbol = true;
             var previousSymbol = (char)0;
@@ -131,6 +131,7 @@ public static class CreatorHelper
                 ++symbolsCount;
             }
             streamWriter.Write(PredefinedConstants.SourceRowEnding);
+            ++createdRowsCount;
         }
     }
 
