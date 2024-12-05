@@ -48,7 +48,7 @@ To pass the configuration for execution, you need to put the configuration file 
 You can also pass the path to the configuration file as the first parameter at startup. Preset configuration files for Creator are located in
 the [`Presets\Creator`](https://github.com/TheSquidCombatant/LongFileSort/tree/main/Presets/Creator) directory.
 ## Creator.Checker
-Executable file project that checks generated files source files. To run, you need a configuration file the same as for the Creator project.
+Executable file project that checks generated source files with unsorted data. To run, you need a configuration file the same as for the Creator project.
 ## Sorter
 Executable file project that creates a file with sorted data based on a file with unsorted data. To run, you need to provide a configuration file of the following type:
 ```json
@@ -63,7 +63,7 @@ To pass the configuration for execution, you need to put the configuration file 
 You can also pass the path to the configuration file as the first parameter at startup. Preset configuration files for Creator are located in
 the [`Presets\Sorter`](https://github.com/TheSquidCombatant/LongFileSort/tree/main/Presets/Sorter) directory.
 ## Sorter.Checker
-Executable file project that processes a file of unsorted data and generates a file of sorted data.
+Executable file project that checks generated result files with sorted data. To run, you need a configuration file the same as for the Creator project.
 ## Utilities
 Library project that implements all logic.
 ## Presets
