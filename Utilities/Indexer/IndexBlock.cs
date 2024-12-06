@@ -2,15 +2,15 @@
 using LongFileSort.Utilities.Options;
 using System;
 using System.IO;
-using System.Text;
+using System.Runtime.CompilerServices;
 
 namespace LongFileSort.Utilities.Indexer;
 
 public class IndexBlock
 {
-    internal static long CachedSymbolsCount = PredefinedConstants.StringPartCacheSymbolsCount;
+    internal static int CachedSymbolsCount = PredefinedConstants.StringPartCacheSymbolsCount;
 
-    internal static long BlockSizeBytes = sizeof(long) * 4 + sizeof(char) * CachedSymbolsCount;
+    internal static int BlockSizeBytes = sizeof(long) * 4 + sizeof(char) * CachedSymbolsCount;
 
     public readonly Data IndexBlockData;
 
@@ -106,24 +106,23 @@ public class IndexBlock
         /// </summary>
         public readonly long StringEndPosition;
 
-        public byte[] ToByteArray()
+        public unsafe byte[] ToByteArray()
         {
-            var bytes = new byte[BlockSizeBytes];
+            var bytes = GC.AllocateUninitializedArray<byte>(IndexBlock.BlockSizeBytes, false);
 
-            var buffer = BitConverter.GetBytes(NumberStartPosition);
-            Array.Copy(buffer, 0, bytes, 0, sizeof(long));
-            buffer = BitConverter.GetBytes(NumberEndPosition);
-            Array.Copy(buffer, 0, bytes, sizeof(long), sizeof(long));
-            buffer = BitConverter.GetBytes(StringStartPosition);
-            Array.Copy(buffer, 0, bytes, sizeof(long) * 2, sizeof(long));
-            buffer = BitConverter.GetBytes(StringEndPosition);
-            Array.Copy(buffer, 0, bytes, sizeof(long) * 3, sizeof(long));
-
-            for (int i = 0; i < CachedSymbolsCount; ++i)
+            fixed(byte* target = &bytes[0])
             {
-                buffer = BitConverter.GetBytes(CachedStringStart[i]);
-                var position = sizeof(long) * 4 + sizeof(char) * i;
-                Array.Copy(buffer, 0, bytes, position, sizeof(char));
+                Unsafe.Write(target, NumberStartPosition);
+                Unsafe.Write(target + sizeof(long), NumberEndPosition);
+                Unsafe.Write(target + sizeof(long) * 2, StringStartPosition);
+                Unsafe.Write(target + sizeof(long) * 3, StringEndPosition);
+
+                var cacheLength = IndexBlock.CachedSymbolsCount * sizeof(char);
+
+                fixed (char* symbols = &this.CachedStringStart[0])
+                {
+                    Buffer.MemoryCopy(symbols, target + sizeof(long) * 4, cacheLength, cacheLength);
+                }
             }
 
             return bytes;
@@ -143,19 +142,22 @@ public class IndexBlock
             this.StringEndPosition = stringEndPosition;
         }
 
-        public Data(byte[] bytes)
+        public unsafe Data(byte[] bytes)
         {
-            this.NumberStartPosition = BitConverter.ToInt64(bytes, 0);
-            this.NumberEndPosition = BitConverter.ToInt64(bytes, sizeof(long));
-            this.StringStartPosition = BitConverter.ToInt64(bytes, sizeof(long) * 2);
-            this.StringEndPosition = BitConverter.ToInt64(bytes, sizeof(long) * 3);
-            this.CachedStringStart = new char[CachedSymbolsCount];
-
-            for (int i = 0; i < CachedSymbolsCount; ++i)
+            fixed (byte* source = &bytes[0])
             {
-                var position = sizeof(long) * 4 + sizeof(char) * i;
-                var symbol = BitConverter.ToChar(bytes, position);
-                this.CachedStringStart[i] = symbol;
+                this.NumberStartPosition = Unsafe.Read<long>(source);
+                this.NumberEndPosition = Unsafe.Read<long>(source + sizeof(long));
+                this.StringStartPosition = Unsafe.Read<long>(source + sizeof(long) * 2);
+                this.StringEndPosition = Unsafe.Read<long>(source + sizeof(long) * 3);
+
+                this.CachedStringStart = GC.AllocateUninitializedArray<char>(IndexBlock.CachedSymbolsCount, false);
+                var cacheLength = IndexBlock.CachedSymbolsCount * sizeof(char);
+
+                fixed (char* symbols = &this.CachedStringStart[0])
+                {
+                    Buffer.MemoryCopy(source + sizeof(long) * 4, symbols, cacheLength, cacheLength);
+                }
             }
         }
     }
