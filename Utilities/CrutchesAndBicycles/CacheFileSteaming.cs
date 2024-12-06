@@ -20,11 +20,17 @@ public class CacheFileSteaming : IDisposable
 
     private bool _isDisposed = false;
 
+    private readonly FileStream _stream;
+
     private class Pair { public bool IsBusy; public FileAccess Access; public FileStream Stream; }
 
     private class Page { public bool Changed; public long Position; public byte[] Data; }
 
-    public CacheFileSteaming(string filePath) => this._filePath = filePath;
+    public CacheFileSteaming(string filePath)
+    {
+        this._stream = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
+        this._filePath = filePath;
+    }
 
     /// <summary>
     /// Well suited for short readings.
@@ -185,15 +191,10 @@ public class CacheFileSteaming : IDisposable
 
     private Page ReadPage(long position)
     {
-        var fileStream = this.Request(FileAccess.Read);
-
-        if (fileStream.Length <= position) return null;
-        fileStream.Position = position;
+        if (this._stream.Length <= position) return null;
+        this._stream.Position = position;
         var pageBuffer = new byte[_pageSize];
-        var bytesCount = fileStream.Read(pageBuffer, 0, _pageSize);
-
-        this.Release(fileStream);
-
+        var bytesCount = this._stream.Read(pageBuffer, 0, _pageSize);
         if (bytesCount < _pageSize) Array.Resize(ref pageBuffer, bytesCount);
         return new Page() { Changed = false, Position = position, Data = pageBuffer };
     }
@@ -221,12 +222,8 @@ public class CacheFileSteaming : IDisposable
 
     private void WritePage(Page page)
     {
-        var fileStream = this.Request(FileAccess.Write);
-
-        fileStream.Position = page.Position;
-        fileStream.Write(page.Data, 0, page.Data.Length);
-
-        this.Release(fileStream);
+        this._stream.Position = page.Position;
+        this._stream.Write(page.Data, 0, page.Data.Length);
     }
 
     public void Dispose()
@@ -235,12 +232,14 @@ public class CacheFileSteaming : IDisposable
 
         lock (this._cache)
             foreach (var page in this._cache)
-                    if (page.Changed)
-                        WritePage(page);
+                if (page.Changed)
+                    WritePage(page);
 
         lock (this._pool)
             foreach (var pair in this._pool)
                 pair.Stream.Dispose();
+
+        this._stream.Dispose();
 
         this._isDisposed = true;
     }
