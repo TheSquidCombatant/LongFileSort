@@ -14,11 +14,13 @@ public class LongFileIndex : ILargeList<IndexBlock>, IDisposable
 
     private bool _isDisposed = false;
 
-    private long _longCount = -1;
+    private long _longCount = 0;
 
     internal IndexerOptions IndexerOptions { get; private set; }
 
-    internal CacheFileSteaming CacheFileSteaming { get; private set; }
+    internal CacheFileSteaming IndexFileCache { get; private set; }
+
+    internal CacheFileSteaming SourceFileCache { get; private set; }
 
     public LongFileIndex(
         IndexerOptions indexerOptions,
@@ -54,7 +56,7 @@ public class LongFileIndex : ILargeList<IndexBlock>, IDisposable
     {
         var position = index * IndexBlock.BlockSizeBytes;
         var buffer = indexBlock.IndexBlockData.ToByteArray();
-        CacheFileSteaming.WriteThroughCache(this.IndexerOptions.IndexFilePath, position, buffer);
+        this.IndexFileCache.WriteThroughCache(position, buffer);
     }
 
     /// <summary>
@@ -64,7 +66,7 @@ public class LongFileIndex : ILargeList<IndexBlock>, IDisposable
     {
         var buffer = new byte[IndexBlock.BlockSizeBytes];
         var position = index * IndexBlock.BlockSizeBytes;
-        CacheFileSteaming.ReadThroughCache(this.IndexerOptions.IndexFilePath, position, buffer);
+        this.IndexFileCache.ReadThroughCache(position, buffer);
         var data = new IndexBlock.Data(buffer);
         return new IndexBlock(data, this);
     }
@@ -72,7 +74,8 @@ public class LongFileIndex : ILargeList<IndexBlock>, IDisposable
     private void FlushIndex()
     {
         if (this._isDisposed) return;
-        this.CacheFileSteaming.Dispose();
+        this.IndexFileCache.Dispose();
+        this.SourceFileCache.Dispose();
         if (this._cleanupIndexFileWhenClosed) File.Delete(this.IndexerOptions.IndexFilePath);
         this._isDisposed = true;
     }
@@ -80,12 +83,15 @@ public class LongFileIndex : ILargeList<IndexBlock>, IDisposable
     private void BuildIndex(IndexerOptions indexerOptions, bool rebuild)
     {
         this.IndexerOptions = indexerOptions;
-        this.CacheFileSteaming = new CacheFileSteaming();
+        this.IndexFileCache = new CacheFileSteaming(indexerOptions.IndexFilePath);
+        this.SourceFileCache = new CacheFileSteaming(indexerOptions.SourceFilePath);
 
         if (rebuild) IndexBlockParser.ConvertSourceToIndexFile(
             this.IndexerOptions.SourceFilePath,
             this.IndexerOptions.IndexFilePath,
             this.IndexerOptions.SourceEncoding);
+
+        if (!File.Exists(this.IndexerOptions.IndexFilePath)) return;
 
         this._longCount = new FileInfo(this.IndexerOptions.IndexFilePath).Length / IndexBlock.BlockSizeBytes;
     }

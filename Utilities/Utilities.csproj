@@ -5,6 +5,7 @@
 		<LangVersion>preview</LangVersion>
 		<TargetFramework>net8.0</TargetFramework>
 		<RootNamespace>LongFileSort.Utilities</RootNamespace>
+		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
 	</PropertyGroup>
 
 </Project>
