@@ -24,7 +24,7 @@ public class CacheFileSteaming : IDisposable
 
     private class Pair { public bool IsBusy; public FileAccess Access; public FileStream Stream; }
 
-    private class Page { public bool Changed; public long Position; public byte[] Data; }
+    private class Page { public bool Changed; public long Position; public int Length; public byte[] Data; }
 
     public CacheFileSteaming(string filePath)
     {
@@ -39,23 +39,25 @@ public class CacheFileSteaming : IDisposable
     {
         var pagePosition = (position / _pageSize) * _pageSize;
         var page = this.GetPage(pagePosition);
-        if (page == null) return 0;
+        if (page.Length == 0) return 0;
 
-        var sourceOffset = position - pagePosition;
-        var readCount = (page.Data.Length < sourceOffset ? 0 : page.Data.Length - sourceOffset);
+        var pageOffset = position - pagePosition;
+        var readCount = (page.Length < pageOffset ? 0 : page.Length - pageOffset);
         readCount = Math.Min(buffer.Length, readCount);
-        Array.Copy(page.Data, sourceOffset, buffer, 0, readCount);
+
+        Array.Copy(page.Data, pageOffset, buffer, 0, readCount);
 
         var readCountTotal = readCount;
         var bufferPosition = readCount;
         pagePosition += _pageSize;
 
-        while ((page.Data.Length == _pageSize) && (bufferPosition < buffer.Length))
+        while ((page.Length == _pageSize) && (bufferPosition < buffer.Length))
         {
             page = this.GetPage(pagePosition);
-            if (page == null) return (int)readCountTotal;
+            if (page.Length == 0) return (int)readCountTotal;
 
-            readCount = Math.Min(buffer.Length - bufferPosition, page.Data.Length);
+            readCount = Math.Min(buffer.Length - bufferPosition, page.Length);
+
             Array.Copy(page.Data, 0, buffer, bufferPosition, readCount);
 
             readCountTotal += readCount;
@@ -73,23 +75,17 @@ public class CacheFileSteaming : IDisposable
     {
         lock (this._cache)
         {
+            if (buffer.Length == 0) return;
             var pagePosition = (position / _pageSize) * _pageSize;
             var page = this.GetPage(pagePosition);
-            var dataSize = (int)Math.Min(_pageSize, buffer.Length + position - pagePosition);
 
-            if (page == null)
-            {
-                page = new Page() { Position = pagePosition, Data = new byte[dataSize] };
-            }
-            {
-                if (dataSize > page.Data.Length) Array.Resize(ref page.Data, dataSize);
-            }
+            var pageOffset = position - pagePosition;
+            var writeCount = Math.Min(buffer.Length, page.Data.Length - pageOffset);
 
-            var writeCount = Math.Min(buffer.Length, page.Data.Length - position + pagePosition);
-            Array.Copy(buffer, 0, page.Data, position - pagePosition, writeCount);
+            Array.Copy(buffer, 0, page.Data, pageOffset, writeCount);
 
+            page.Length = (int)Math.Max(pageOffset + writeCount, page.Length);
             page.Changed = true;
-            this.SetPage(page);
 
             pagePosition += _pageSize;
             var bufferPosition = writeCount;
@@ -97,21 +93,12 @@ public class CacheFileSteaming : IDisposable
             while (bufferPosition < buffer.Length)
             {
                 page = this.GetPage(pagePosition);
-                dataSize = (int)Math.Min(_pageSize, buffer.Length - bufferPosition);
-
-                if (page == null)
-                {
-                    page = new Page() { Position = pagePosition, Data = new byte[dataSize] };
-                }
-                {
-                    if (dataSize > page.Data.Length) Array.Resize(ref page.Data, dataSize);
-                }
-
                 writeCount = Math.Min(page.Data.Length, buffer.Length - bufferPosition);
+
                 Array.Copy(buffer, bufferPosition, page.Data, 0, writeCount);
 
+                page.Length = (int)Math.Max(writeCount, page.Length);
                 page.Changed = true;
-                this.SetPage(page);
 
                 pagePosition += _pageSize;
                 bufferPosition += writeCount;
@@ -171,59 +158,61 @@ public class CacheFileSteaming : IDisposable
     {
         lock (this._cache)
         {
-            if (this._cache.Last?.Value.Position == position) return this._cache.Last.Value;
-
-            var node = this._cache.FindLastNode(p => p.Position == position);
-            if (node != null) this._cache.Remove(node);
-
-            var pageToReturn = node?.Value ?? ReadPage(position);
-            if (pageToReturn == null) return null;
-            this._cache.AddLast(pageToReturn);
-
-            if (this._cache.Count < _pagesCount) return pageToReturn;
-
-            if (this._cache.First.Value.Changed) WritePage(this._cache.First.Value);
-            this._cache.RemoveFirst();
-
-            return pageToReturn;
-        }
-    }
-
-    private Page ReadPage(long position)
-    {
-        if (this._stream.Length <= position) return null;
-        this._stream.Position = position;
-        var pageBuffer = new byte[_pageSize];
-        var bytesCount = this._stream.Read(pageBuffer, 0, _pageSize);
-        if (bytesCount < _pageSize) Array.Resize(ref pageBuffer, bytesCount);
-        return new Page() { Changed = false, Position = position, Data = pageBuffer };
-    }
-
-    private void SetPage(Page page)
-    {
-        lock (this._cache)
-        {
-            if (this._cache.Last?.Value.Position == page.Position)
+            if (this._cache.Last?.Value.Position == position)
             {
-                this._cache.Last.Value = page;
-                return;
+                return this._cache.Last.Value;
             }
 
-            var node = this._cache.FindLastNode(p => p.Position == page.Position);
-            if (node != null) this._cache.Remove(node);
+            var node = this._cache.FindLastNode(p => p.Position == position);
+
+            if (node != null)
+            {
+                this._cache.Remove(node);
+                this._cache.AddLast(node);
+                return node.Value;
+            }
+
+            if (this._cache.Count == _pagesCount)
+            {
+                var pageToUpdate = this._cache.First.Value;
+                if (pageToUpdate.Changed) WritePage(pageToUpdate);
+                pageToUpdate.Changed = false;
+                pageToUpdate.Position = position;
+                ReadPage(pageToUpdate);
+                if (pageToUpdate.Length != 0)
+                {
+                    this._cache.RemoveFirst();
+                    this._cache.AddLast(pageToUpdate);
+                }
+                return pageToUpdate;
+            }
+
+            var page = new Page()
+            {
+                Position = position,
+                Changed = false,
+                Data = new byte[_pageSize]
+            };
+
+            ReadPage(page);
             this._cache.AddLast(page);
-
-            if (this._cache.Count < _pagesCount) return;
-
-            if (this._cache.First.Value.Changed) WritePage(this._cache.First.Value);
-            this._cache.RemoveFirst();
+            return page;
         }
+    }
+
+    private void ReadPage(Page page)
+    {
+        page.Length = 0;
+        if (this._stream.Length <= page.Position) return;
+        this._stream.Position = page.Position;
+        var bytesCount = this._stream.Read(page.Data, 0, page.Data.Length);
+        page.Length = bytesCount;
     }
 
     private void WritePage(Page page)
     {
         this._stream.Position = page.Position;
-        this._stream.Write(page.Data, 0, page.Data.Length);
+        this._stream.Write(page.Data, 0, page.Length);
     }
 
     public void Dispose()
