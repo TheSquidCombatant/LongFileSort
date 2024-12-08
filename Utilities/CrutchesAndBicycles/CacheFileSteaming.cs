@@ -12,6 +12,8 @@ public class CacheFileSteaming : IDisposable
 
     private readonly int _pagesCount = PredefinedConstants.FileStreamBufferPagesCount;
 
+    private readonly Dictionary<long, LinkedListNode<Page>> _links = new();
+
     private readonly LinkedList<Page> _cache = new();
 
     private readonly List<Pair> _pool = new();
@@ -163,9 +165,9 @@ public class CacheFileSteaming : IDisposable
                 return this._cache.Last.Value;
             }
 
-            var node = this._cache.FindLastNode(p => p.Position == position);
+            var found = this._links.TryGetValue(position, out var node);
 
-            if (node != null)
+            if (found)
             {
                 this._cache.Remove(node);
                 this._cache.AddLast(node);
@@ -174,16 +176,22 @@ public class CacheFileSteaming : IDisposable
 
             if (this._cache.Count == _pagesCount)
             {
-                var pageToUpdate = this._cache.First.Value;
-                if (pageToUpdate.Changed) WritePage(pageToUpdate);
-                pageToUpdate.Changed = false;
+                node = this._cache.First;
+                var pageToUpdate = node.Value;
+                if (pageToUpdate.Changed)
+                {
+                    WritePage(pageToUpdate);
+                    pageToUpdate.Changed = false;
+                }
+                this._links.Remove(pageToUpdate.Position);
                 pageToUpdate.Position = position;
                 ReadPage(pageToUpdate);
                 if (pageToUpdate.Length != 0)
                 {
                     this._cache.RemoveFirst();
-                    this._cache.AddLast(pageToUpdate);
+                    node = this._cache.AddLast(pageToUpdate);
                 }
+                this._links.Add(position, node);
                 return pageToUpdate;
             }
 
@@ -195,7 +203,8 @@ public class CacheFileSteaming : IDisposable
             };
 
             ReadPage(page);
-            this._cache.AddLast(page);
+            node = this._cache.AddLast(page);
+            this._links.Add(position, node);
             return page;
         }
     }
