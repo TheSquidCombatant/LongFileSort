@@ -27,14 +27,14 @@ public class IndexBlock
     /// </remarks>
     public StreamReader GetNumberPartReader()
     {
-        var fileStream = this.ParentIndexer.IndexFileCache.Request(FileAccess.Read);
+        var fileStream = this.ParentIndexer.SourceFileCache.Request(FileAccess.Read);
 
         var readonlyPartialStream = new ReadonlyPartialStream(
             fileStream,
             this.IndexBlockData.NumberStartPosition,
             this.IndexBlockData.NumberEndPosition);
 
-        readonlyPartialStream.OnClose += c => this.ParentIndexer.IndexFileCache.Release(fileStream);
+        readonlyPartialStream.OnClose += c => this.ParentIndexer.SourceFileCache.Release(fileStream);
 
         return new StreamReader(readonlyPartialStream, this.ParentIndexer.IndexerOptions.SourceEncoding);
     }
@@ -50,14 +50,14 @@ public class IndexBlock
     /// </remarks>
     public StreamReader GetStringPartReader()
     {
-        var fileStream = this.ParentIndexer.IndexFileCache.Request(FileAccess.Read);
+        var fileStream = this.ParentIndexer.SourceFileCache.Request(FileAccess.Read);
 
         var readonlyPartialStream = new ReadonlyPartialStream(
             fileStream,
             this.IndexBlockData.StringStartPosition,
             this.IndexBlockData.StringEndPosition);
 
-        readonlyPartialStream.OnClose += c => this.ParentIndexer.IndexFileCache.Release(fileStream);
+        readonlyPartialStream.OnClose += c => this.ParentIndexer.SourceFileCache.Release(fileStream);
 
         return new StreamReader(readonlyPartialStream, this.ParentIndexer.IndexerOptions.SourceEncoding);
     }
