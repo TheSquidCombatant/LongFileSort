@@ -42,46 +42,26 @@ public static class IndexBlockParser
         var actualPreamble = new byte[expectedPreamble.Length];
         sourceFileStream.Read(actualPreamble, 0, actualPreamble.Length);
 
-        if (expectedPreamble.SequenceEqual(actualPreamble) && !append)
-            targetFileStream.Write(actualPreamble);
+        var partsDelimiterBytes = encoding.GetBytes(PredefinedConstants.SourcePartsDelimiter);
+        var rowEndingBytes = encoding.GetBytes(PredefinedConstants.SourceRowEnding);
 
         var indexBuffer = new byte[IndexBlock.BlockSizeBytes];
-        var sourceBuffer = new byte[PredefinedConstants.DefaultFileStreamBufferSize];
+
+        if (expectedPreamble.SequenceEqual(actualPreamble) && !append)
+            targetFileStream.Write(actualPreamble);
 
         while (indexFileStream.Position < indexFileStream.Length)
         {
             indexFileStream.Read(indexBuffer);
             var block = new IndexBlock.Data(indexBuffer);
 
-            if (block.NumberEndPosition == 0)
-            {
-                var bytes = encoding.GetBytes(block.NumberStartPosition.ToString());
-                targetFileStream.Write(bytes);
-            }
-            else
-            {
-                sourceFileStream.Position = block.NumberStartPosition;
-                while (sourceFileStream.Position < block.NumberEndPosition)
-                {
-                    var bytesLeft = block.NumberEndPosition - sourceFileStream.Position;
-                    var expectedCount = (int)Math.Min(bytesLeft, sourceBuffer.Length);
-                    var actualCount = sourceFileStream.Read(sourceBuffer, 0, expectedCount);
-                    targetFileStream.Write(sourceBuffer, 0, actualCount);
-                }
-            }
-
-            targetFileStream.Write(encoding.GetBytes(PredefinedConstants.SourcePartsDelimiter));
-
-            sourceFileStream.Position = block.StringStartPosition;
-            while (sourceFileStream.Position < block.StringEndPosition)
-            {
-                var bytesLeft = block.StringEndPosition - sourceFileStream.Position;
-                var expectedCount = (int)Math.Min(bytesLeft, sourceBuffer.Length);
-                var actualCount = sourceFileStream.Read(sourceBuffer, 0, expectedCount);
-                targetFileStream.Write(sourceBuffer, 0, actualCount);
-            }
-
-            targetFileStream.Write(encoding.GetBytes(PredefinedConstants.SourceRowEnding));
+            WriteIndexBlock(
+                block,
+                targetFileStream,
+                sourceFileStream,
+                encoding,
+                partsDelimiterBytes,
+                rowEndingBytes);
         }
     }
 
@@ -262,5 +242,58 @@ public static class IndexBlockParser
             numberEndPosition,
             stringStartPosition,
             stringEndPosition);
+    }
+
+    private static void WriteIndexBlock(
+        IndexBlock.Data block,
+        FileStream targetFileStream,
+        FileStream sourceFileStream,
+        Encoding encoding,
+        byte[] partsDelimiterBytes,
+        byte[] rowEndingBytes)
+    {
+        if (block.NumberEndPosition == 0)
+        {
+            var bytes = encoding.GetBytes(block.NumberStartPosition.ToString());
+            targetFileStream.Write(bytes);
+        }
+        else
+        {
+            var sourceBuffer = new byte[PredefinedConstants.DefaultFileStreamBufferSize];
+            sourceFileStream.Position = block.NumberStartPosition;
+            while (sourceFileStream.Position < block.NumberEndPosition)
+            {
+                var bytesLeft = block.NumberEndPosition - sourceFileStream.Position;
+                var expectedCount = (int)Math.Min(bytesLeft, sourceBuffer.Length);
+                var actualCount = sourceFileStream.Read(sourceBuffer, 0, expectedCount);
+                targetFileStream.Write(sourceBuffer, 0, actualCount);
+            }
+        }
+
+        targetFileStream.Write(partsDelimiterBytes);
+
+        var stringPartLength = block.StringEndPosition - block.StringStartPosition;
+        if (stringPartLength <= PredefinedConstants.StringPartCacheSymbolsCount)
+        {
+            for (int s = 0; s < stringPartLength; ++s)
+            {
+                var sourceBuffer = encoding.GetBytes([block.CachedStringStart[s]]);
+                targetFileStream.Write(sourceBuffer, 0, sourceBuffer.Length);
+            }
+        }
+        else
+        {
+            var sourceBuffer = new byte[PredefinedConstants.DefaultFileStreamBufferSize];
+            sourceFileStream.Position = block.StringStartPosition;
+            while (sourceFileStream.Position < block.StringEndPosition)
+            {
+                var bytesLeft = block.StringEndPosition - sourceFileStream.Position;
+                var expectedCount = (int)Math.Min(bytesLeft, sourceBuffer.Length);
+                var actualCount = sourceFileStream.Read(sourceBuffer, 0, expectedCount);
+                targetFileStream.Write(sourceBuffer, 0, actualCount);
+            }
+        }
+
+        targetFileStream.Write(rowEndingBytes);
     }
 }
