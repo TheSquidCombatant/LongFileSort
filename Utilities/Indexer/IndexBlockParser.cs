@@ -45,7 +45,7 @@ public static class IndexBlockParser
         var partsDelimiterBytes = encoding.GetBytes(PredefinedConstants.SourcePartsDelimiter);
         var rowEndingBytes = encoding.GetBytes(PredefinedConstants.SourceRowEnding);
 
-        var indexBuffer = new byte[IndexBlock.BlockSizeBytes];
+        var indexBuffer = new byte[IndexBlock.Data.BlockSizeBytes];
 
         if (expectedPreamble.SequenceEqual(actualPreamble) && !append)
             targetFileStream.Write(actualPreamble);
@@ -117,7 +117,7 @@ public static class IndexBlockParser
         long stringStartPosition = 0;
         long stringEndPosition = 0;
 
-        var cachedStringStart = new char[IndexBlock.CachedSymbolsCount];
+        var cachedStringStart = new char[IndexBlock.Data.CachedSymbolsCount];
         Array.Fill(cachedStringStart, PredefinedConstants.StringCacheFiller);
 
         const int stateRowStart = 0;
@@ -273,7 +273,7 @@ public static class IndexBlockParser
         targetFileStream.Write(partsDelimiterBytes);
 
         var stringPartLength = block.StringEndPosition - block.StringStartPosition;
-        if (stringPartLength <= PredefinedConstants.StringPartCacheSymbolsCount)
+        if (stringPartLength <= IndexBlock.Data.CachedSymbolsCount)
         {
             for (int s = 0; s < stringPartLength; ++s)
             {

@@ -54,7 +54,7 @@ public class LongFileIndex : ILargeList<IndexBlock>, IDisposable
     /// </summary>
     private void SetIndexBlock(long index, IndexBlock indexBlock)
     {
-        var position = index * IndexBlock.BlockSizeBytes;
+        var position = index * IndexBlock.Data.BlockSizeBytes;
         var buffer = indexBlock.IndexBlockData.ToByteArray();
         this.IndexFileCache.WriteThroughCache(position, buffer);
         if (this._longCount < ++index) this._longCount = index;
@@ -65,11 +65,11 @@ public class LongFileIndex : ILargeList<IndexBlock>, IDisposable
     /// </summary>
     private IndexBlock GetIndexBlock(long index)
     {
-        var buffer = new byte[IndexBlock.BlockSizeBytes];
-        var position = index * IndexBlock.BlockSizeBytes;
+        var buffer = new byte[IndexBlock.Data.BlockSizeBytes];
+        var position = index * IndexBlock.Data.BlockSizeBytes;
         var count = this.IndexFileCache.ReadThroughCache(position, buffer);
         const string message = "Index file to short to read this index block.";
-        if (count < IndexBlock.BlockSizeBytes) throw new IOException(message);
+        if (count < IndexBlock.Data.BlockSizeBytes) throw new IOException(message);
         var data = new IndexBlock.Data(buffer);
         return new IndexBlock(data, this);
     }
@@ -96,6 +96,6 @@ public class LongFileIndex : ILargeList<IndexBlock>, IDisposable
 
         if (!File.Exists(this.IndexerOptions.IndexFilePath)) return;
 
-        this._longCount = new FileInfo(this.IndexerOptions.IndexFilePath).Length / IndexBlock.BlockSizeBytes;
+        this._longCount = new FileInfo(this.IndexerOptions.IndexFilePath).Length / IndexBlock.Data.BlockSizeBytes;
     }
 }

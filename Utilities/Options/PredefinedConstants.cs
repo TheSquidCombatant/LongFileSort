@@ -14,8 +14,6 @@ internal static class PredefinedConstants
 
     public static readonly char StringCacheFiller = (char)0;
 
-    public static readonly byte StringPartCacheSymbolsCount = 16;
-
     public static readonly string NumberPartForbiddenFirstSymbols = "0";
 
     public static readonly string StringPartForbiddenFirstSymbols = " ";

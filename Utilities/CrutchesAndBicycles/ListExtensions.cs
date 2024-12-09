@@ -6,6 +6,83 @@ using System.Threading.Tasks;
 namespace LongFileSort.Utilities.CrutchesAndBicycles;
 
 /// <summary>
+/// Some extension methods for list below.
+/// </summary>
+public static class ListExtensions
+{
+    /// <summary>
+    /// Swaps two elements.
+    /// </summary>
+    public static void Swap<T>(
+        this ILargeList<T> largeList,
+        long oneIndex,
+        long otherIndex)
+    {
+        if (oneIndex == otherIndex) return;
+        var temp = largeList[oneIndex];
+        largeList[oneIndex] = largeList[otherIndex];
+        largeList[otherIndex] = temp;
+    }
+
+    /// <summary>
+    /// Checks a range of elements and returns a zero-based index of the first order violation.
+    /// </summary>
+    /// <remarks>
+    /// Returns a negative value if the order has not been violated.
+    /// </remarks>
+    public static long IsSorted<T>(
+        this ILargeList<T> largeList,
+        long index,
+        long count,
+        IComparer<T> comparer)
+    {
+        for (var i = index + 1; i < index + count; ++i)
+            if (comparer.Compare(largeList[i - 1], largeList[i]) > 0)
+                return i;
+        return -1;
+    }
+
+    /// <summary>
+    /// Tries to speed up sort using all CPU cores.
+    /// </summary>
+    public static void SortParallel<T>(
+        this ILargeList<T> largeList,
+        long index,
+        long count,
+        IComparer<T> comparer)
+    {
+        InnerSortParallel(index, index + count - 1, 0);
+
+        void InnerSortParallel(long leftBorder, long rightBorder, int degree)
+        {
+            if (leftBorder >= rightBorder) return;
+            var mid = largeList[(leftBorder + rightBorder) / 2];
+            var (left, right) = (leftBorder, rightBorder);
+
+            while (left <= right)
+            {
+                while (comparer.Compare(largeList[left], mid) < 0) ++left;
+                while (comparer.Compare(largeList[right], mid) > 0) --right;
+                if (left <= right) largeList.Swap(left++, right--);
+            }
+
+            if (Math.Pow(2, degree) > PredefinedConstants.SortMaximumDegreeOfParallelism)
+            {
+                largeList.Sort(leftBorder, right - leftBorder + 1, comparer);
+                largeList.Sort(left, rightBorder - left + 1, comparer);
+            }
+            else
+            {
+                void action() => InnerSortParallel(leftBorder, right, degree + 1);
+                var task = Task.Factory.StartNew(action, TaskCreationOptions.LongRunning);
+                InnerSortParallel(left, rightBorder, degree + 1);
+                task.Wait();
+            }
+        }
+    }
+}
+
+/// <summary>
 /// Just replace this interface with IList when it fully supports indexing with a long value.
 /// </summary>
 /// <remarks>
@@ -82,83 +159,6 @@ public interface ILargeList<T>
 
             InnerSort(leftBorder, right);
             InnerSort(left, rightBorder);
-        }
-    }
-}
-
-/// <summary>
-/// Some extension methods for list above.
-/// </summary>
-public static class ListExtensions
-{
-    /// <summary>
-    /// Swaps two elements.
-    /// </summary>
-    public static void Swap<T>(
-        this ILargeList<T> largeList,
-        long oneIndex,
-        long otherIndex)
-    {
-        if (oneIndex == otherIndex) return;
-        var temp = largeList[oneIndex];
-        largeList[oneIndex] = largeList[otherIndex];
-        largeList[otherIndex] = temp;
-    }
-
-    /// <summary>
-    /// Checks a range of elements and returns a zero-based index of the first order violation.
-    /// </summary>
-    /// <remarks>
-    /// Returns a negative value if the order has not been violated.
-    /// </remarks>
-    public static long IsSorted<T>(
-        this ILargeList<T> largeList,
-        long index,
-        long count,
-        IComparer<T> comparer)
-    {
-        for (var i = index + 1; i < index + count; ++i)
-            if (comparer.Compare(largeList[i - 1], largeList[i]) > 0)
-                return i;
-        return -1;
-    }
-
-    /// <summary>
-    /// Tries to speed up sort using all CPU cores.
-    /// </summary>
-    public static void SortParallel<T>(
-        this ILargeList<T> largeList,
-        long index,
-        long count,
-        IComparer<T> comparer)
-    {
-        InnerSortParallel(index, index + count - 1, 0);
-
-        void InnerSortParallel(long leftBorder, long rightBorder, int degree)
-        {
-            if (leftBorder >= rightBorder) return;
-            var mid = largeList[(leftBorder + rightBorder) / 2];
-            var (left, right) = (leftBorder, rightBorder);
-
-            while (left <= right)
-            {
-                while (comparer.Compare(largeList[left], mid) < 0) ++left;
-                while (comparer.Compare(largeList[right], mid) > 0) --right;
-                if (left <= right) largeList.Swap(left++, right--);
-            }
-
-            if (Math.Pow(2, degree) > PredefinedConstants.SortMaximumDegreeOfParallelism)
-            {
-                largeList.Sort(leftBorder, right - leftBorder + 1, comparer);
-                largeList.Sort(left, rightBorder - left + 1, comparer);
-            }
-            else
-            {
-                void action() => InnerSortParallel(leftBorder, right, degree + 1);
-                var task = Task.Factory.StartNew(action, TaskCreationOptions.LongRunning);
-                InnerSortParallel(left, rightBorder, degree + 1);
-                task.Wait();
-            }
         }
     }
 }

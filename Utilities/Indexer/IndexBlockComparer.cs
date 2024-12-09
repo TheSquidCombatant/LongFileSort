@@ -35,7 +35,7 @@ public class IndexBlockComparer : IComparer<IndexBlock>
 
     private static int? StringCacheCoparison(IndexBlock x, IndexBlock y)
     {
-        for (int i = 0; i < IndexBlock.CachedSymbolsCount; ++i)
+        for (int i = 0; i < IndexBlock.Data.CachedSymbolsCount; ++i)
         {
             var result = x.IndexBlockData.CachedStringStart[i] - y.IndexBlockData.CachedStringStart[i];
             if (result != 0) return result;
@@ -49,16 +49,16 @@ public class IndexBlockComparer : IComparer<IndexBlock>
         var firstTotalLength = x.IndexBlockData.StringEndPosition - x.IndexBlockData.StringStartPosition;
         var secondTotalLength = y.IndexBlockData.StringEndPosition - y.IndexBlockData.StringStartPosition;
 
-        if (firstTotalLength <= IndexBlock.CachedSymbolsCount)
-            if (secondTotalLength <= IndexBlock.CachedSymbolsCount)
+        if (firstTotalLength <= IndexBlock.Data.CachedSymbolsCount)
+            if (secondTotalLength <= IndexBlock.Data.CachedSymbolsCount)
                 return 0;
 
-        if (firstTotalLength == IndexBlock.CachedSymbolsCount)
-            if (secondTotalLength > IndexBlock.CachedSymbolsCount)
+        if (firstTotalLength == IndexBlock.Data.CachedSymbolsCount)
+            if (secondTotalLength > IndexBlock.Data.CachedSymbolsCount)
                 return -1;
 
-        if (secondTotalLength == IndexBlock.CachedSymbolsCount)
-            if (firstTotalLength > IndexBlock.CachedSymbolsCount)
+        if (secondTotalLength == IndexBlock.Data.CachedSymbolsCount)
+            if (firstTotalLength > IndexBlock.Data.CachedSymbolsCount)
                 return 1;
 
         return null;

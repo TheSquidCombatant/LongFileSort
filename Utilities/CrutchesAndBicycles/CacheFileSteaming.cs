@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 
 namespace LongFileSort.Utilities.CrutchesAndBicycles;
 
@@ -16,15 +15,11 @@ public class CacheFileSteaming : IDisposable
 
     private readonly LinkedList<Page> _cache = new();
 
-    private readonly List<Pair> _pool = new();
-
     private readonly string _filePath;
 
     private bool _isDisposed = false;
 
     private readonly FileStream _stream;
-
-    private class Pair { public bool IsBusy; public FileAccess Access; public FileStream Stream; }
 
     private class Page { public bool Changed; public long Position; public int Length; public byte[] Data; }
 
@@ -108,54 +103,6 @@ public class CacheFileSteaming : IDisposable
         }
     }
 
-    /// <summary>
-    /// Requests a shared instance with the specified path and read/write permission.
-    /// </summary>
-    /// <returns>
-    /// A stream instance with parameters equivalent
-    /// <see cref="FileMode.OpenOrCreate"/> and <see cref="FileShare.ReadWrite"/>.
-    /// </returns>
-    /// <remarks>
-    /// Each requested <see cref="FileStream"/> should be released
-    /// via method <see cref="PoolFileSteaming.Release"/>.
-    /// You should not close or dispose this instance by youself.
-    /// </remarks>
-    public FileStream Request(FileAccess access)
-    {
-        FileStream stream = null;
-
-        lock (this._pool)
-        {
-            var pair = this._pool.FirstOrDefault(p => p.IsBusy == false && p.Access == access);
-            if (pair != null)
-            {
-                pair.IsBusy = true;
-                stream = pair.Stream;
-                stream.Position = 0;
-            }
-            else
-            {
-                stream = new FileStream(this._filePath, FileMode.OpenOrCreate, access, FileShare.ReadWrite);
-                pair = new Pair() { IsBusy = true, Access = access, Stream = stream };
-                this._pool.Add(pair);
-            }
-            return stream;
-        }
-    }
-
-    /// <summary>
-    /// Releases a requested file stream.
-    /// </summary>
-    public void Release(FileStream fileStream)
-    {
-        fileStream.Flush();
-
-        lock (this._pool)
-            foreach (var pair in this._pool)
-                if (pair.Stream.Equals(fileStream))
-                    pair.IsBusy = false;
-    }
-
     private Page GetPage(long position)
     {
         lock (this._cache)
@@ -230,10 +177,6 @@ public class CacheFileSteaming : IDisposable
             foreach (var page in this._cache)
                 if (page.Changed)
                     WritePage(page);
-
-        lock (this._pool)
-            foreach (var pair in this._pool)
-                pair.Stream.Dispose();
 
         this._stream.Dispose();
 

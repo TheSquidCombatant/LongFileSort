@@ -72,11 +72,11 @@ public class CacheReadonlyFileSteaming : IDisposable
     }
 
     /// <summary>
-    /// Requests a shared instance with the specified path and read/write permission.
+    /// Well suited for long readings.
     /// </summary>
     /// <returns>
-    /// A stream instance with parameters equivalent
-    /// <see cref="FileMode.OpenOrCreate"/> and <see cref="FileShare.ReadWrite"/>.
+    /// A stream instance with parameters equivalent <see cref="FileMode.Open"/>,
+    /// <see cref="FileAccess.Read"/> and <see cref="FileShare.ReadWrite"/>.
     /// </returns>
     /// <remarks>
     /// Each requested <see cref="FileStream"/> should be released

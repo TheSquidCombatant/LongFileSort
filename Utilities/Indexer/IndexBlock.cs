@@ -8,10 +8,6 @@ namespace LongFileSort.Utilities.Indexer;
 
 public class IndexBlock
 {
-    internal static int CachedSymbolsCount = PredefinedConstants.StringPartCacheSymbolsCount;
-
-    internal static int BlockSizeBytes = sizeof(long) * 4 + sizeof(char) * CachedSymbolsCount;
-
     public readonly Data IndexBlockData;
 
     public readonly LongFileIndex ParentIndexer;
@@ -94,6 +90,13 @@ public class IndexBlock
 
     public class Data
     {
+        public const int CachedSymbolsCount = 16;
+
+        public const int BlockSizeBytes = sizeof(long) * 4 + sizeof(char) * CachedSymbolsCount;
+
+        /// <summary>
+        /// <see cref="CachedStringStart"/> stores the beginning of the string part of the row to speed up operations.
+        /// </summary>
         public readonly char[] CachedStringStart;
 
         /// <summary>
@@ -126,7 +129,7 @@ public class IndexBlock
 
         public unsafe byte[] ToByteArray()
         {
-            var bytes = GC.AllocateUninitializedArray<byte>(IndexBlock.BlockSizeBytes, false);
+            var bytes = GC.AllocateUninitializedArray<byte>(IndexBlock.Data.BlockSizeBytes, false);
 
             fixed(byte* target = &bytes[0])
             {
@@ -135,7 +138,7 @@ public class IndexBlock
                 Unsafe.Write(target + sizeof(long) * 2, StringStartPosition);
                 Unsafe.Write(target + sizeof(long) * 3, StringEndPosition);
 
-                var cacheLength = IndexBlock.CachedSymbolsCount * sizeof(char);
+                var cacheLength = IndexBlock.Data.CachedSymbolsCount * sizeof(char);
 
                 fixed (char* symbols = &this.CachedStringStart[0])
                 {
@@ -169,8 +172,8 @@ public class IndexBlock
                 this.StringStartPosition = Unsafe.Read<long>(source + sizeof(long) * 2);
                 this.StringEndPosition = Unsafe.Read<long>(source + sizeof(long) * 3);
 
-                this.CachedStringStart = GC.AllocateUninitializedArray<char>(IndexBlock.CachedSymbolsCount, false);
-                var cacheLength = IndexBlock.CachedSymbolsCount * sizeof(char);
+                this.CachedStringStart = GC.AllocateUninitializedArray<char>(IndexBlock.Data.CachedSymbolsCount, false);
+                var cacheLength = IndexBlock.Data.CachedSymbolsCount * sizeof(char);
 
                 fixed (char* symbols = &this.CachedStringStart[0])
                 {
