@@ -27,7 +27,18 @@ public class IndexBlock
     /// </remarks>
     public StreamReader GetNumberPartReader()
     {
-        var fileStream = this.ParentIndexer.SourceFileCache.Request(FileAccess.Read);
+        var length = this.IndexBlockData.NumberEndPosition - this.IndexBlockData.NumberStartPosition;
+
+        if (length < PredefinedConstants.FileStreamBufferPageSize)
+        {
+            var buffer = new byte[length];
+            var count = this.ParentIndexer.SourceFileCache.ReadThroughCache(this.IndexBlockData.NumberStartPosition, buffer);
+            if (count < length) throw new IOException("The actual and expected lengths of the number part do not match.");
+            var memoryStream = new MemoryStream(buffer);
+            return new StreamReader(memoryStream, this.ParentIndexer.IndexerOptions.SourceEncoding);
+        }
+
+        var fileStream = this.ParentIndexer.SourceFileCache.Request();
 
         var readonlyPartialStream = new ReadonlyPartialStream(
             fileStream,
@@ -50,7 +61,18 @@ public class IndexBlock
     /// </remarks>
     public StreamReader GetStringPartReader()
     {
-        var fileStream = this.ParentIndexer.SourceFileCache.Request(FileAccess.Read);
+        var length = this.IndexBlockData.StringEndPosition - this.IndexBlockData.StringStartPosition;
+
+        if (length < PredefinedConstants.FileStreamBufferPageSize)
+        {
+            var buffer = new byte[length];
+            var count = this.ParentIndexer.SourceFileCache.ReadThroughCache(this.IndexBlockData.StringStartPosition, buffer);
+            if (count < length) throw new IOException("The actual and expected lengths of the string part do not match.");
+            var memoryStream = new MemoryStream(buffer);
+            return new StreamReader(memoryStream, this.ParentIndexer.IndexerOptions.SourceEncoding);
+        }
+
+        var fileStream = this.ParentIndexer.SourceFileCache.Request();
 
         var readonlyPartialStream = new ReadonlyPartialStream(
             fileStream,

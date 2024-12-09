@@ -28,9 +28,11 @@ internal static class PredefinedConstants
 
     public static readonly int DefaultFileStreamBufferSize = 4096;
 
-    public static readonly int FileStreamBufferPageSize = 32768;
+    public static readonly int FileStreamBufferPageSize = 16384;
 
-    public static readonly int FileStreamBufferPagesCount = Environment.ProcessorCount * 2;
+    public static readonly int FileStreamBufferPagesCount = Environment.ProcessorCount * 4;
+
+    public static readonly int FileStreamReadonlyBufferPagesCount = 4;
 
     public static readonly int SortMaximumDegreeOfParallelism = Environment.ProcessorCount;
 

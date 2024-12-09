@@ -20,7 +20,7 @@ public class LongFileIndex : ILargeList<IndexBlock>, IDisposable
 
     internal CacheFileSteaming IndexFileCache { get; private set; }
 
-    internal CacheFileSteaming SourceFileCache { get; private set; }
+    internal CacheReadonlyFileSteaming SourceFileCache { get; private set; }
 
     public LongFileIndex(
         IndexerOptions indexerOptions,
@@ -87,7 +87,7 @@ public class LongFileIndex : ILargeList<IndexBlock>, IDisposable
     {
         this.IndexerOptions = indexerOptions;
         this.IndexFileCache = new CacheFileSteaming(indexerOptions.IndexFilePath);
-        this.SourceFileCache = new CacheFileSteaming(indexerOptions.SourceFilePath);
+        this.SourceFileCache = new CacheReadonlyFileSteaming(indexerOptions.SourceFilePath);
 
         if (rebuild) IndexBlockParser.ConvertSourceToIndexFile(
             this.IndexerOptions.SourceFilePath,
