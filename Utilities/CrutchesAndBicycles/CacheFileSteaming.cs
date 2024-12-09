@@ -211,8 +211,6 @@ public class CacheFileSteaming : IDisposable
 
     private void ReadPage(Page page)
     {
-        page.Length = 0;
-        if (this._stream.Length <= page.Position) return;
         this._stream.Position = page.Position;
         var bytesCount = this._stream.Read(page.Data, 0, page.Data.Length);
         page.Length = bytesCount;
