@@ -32,7 +32,7 @@ internal static class PredefinedConstants
 
     public static readonly int FileStreamReadonlyBufferPagesCount = 4;
 
-    public static readonly int SortMaximumDegreeOfParallelism = Environment.ProcessorCount;
+    public static readonly int MaximumDegreeOfParallelism = Environment.ProcessorCount;
 
     public static readonly byte FileSizeCheckDeviationPercentage = 5;
 }

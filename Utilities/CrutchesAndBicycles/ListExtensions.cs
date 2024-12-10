@@ -51,7 +51,7 @@ public static class ListExtensions
         long count,
         IComparer<T> comparer)
     {
-        InnerSortParallel(index, index + count - 1, 0);
+        InnerSortParallel(index, index + count - 1, 1);
 
         void InnerSortParallel(long leftBorder, long rightBorder, int degree)
         {
@@ -66,7 +66,7 @@ public static class ListExtensions
                 if (left <= right) largeList.Swap(left++, right--);
             }
 
-            if (Math.Pow(2, degree) > PredefinedConstants.SortMaximumDegreeOfParallelism)
+            if (Math.Pow(2, degree) > PredefinedConstants.MaximumDegreeOfParallelism)
             {
                 largeList.Sort(leftBorder, right - leftBorder + 1, comparer);
                 largeList.Sort(left, rightBorder - left + 1, comparer);
