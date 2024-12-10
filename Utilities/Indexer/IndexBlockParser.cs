@@ -185,7 +185,8 @@ public static class IndexBlockParser
                         {
                             throw new FileLoadException(exceptionMessage);
                         }
-                        numberPartValueItself = long.Parse(new ReadOnlySpan<char>([nextChar]));
+                        var success = long.TryParse(new ReadOnlySpan<char>([nextChar]), out numberPartValueItself);
+                        if (!success) numberPartValueItself = long.MinValue;
                         stateCurrent = stateNumber;
                         break;
                     }
