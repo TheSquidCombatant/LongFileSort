@@ -18,8 +18,8 @@ public static class CreatorCheckerHelper
         CreatorCheckerHelper.ValidateCreatingOptions(options);
         CreatorCheckerHelper.CheckFileSize(options);
         CreatorCheckerHelper.CheckEncodingBom(options);
-        CreatorCheckerHelper.CheckRowsPattern(options);
-        CreatorCheckerHelper.CheckStringsDuplication(options);
+        CreatorCheckerHelper.CheckRowsPattern(options, out var index);
+        CreatorCheckerHelper.CheckStringsDuplication(options, index);
     }
 
     private static void ValidateCreatingOptions(CreatorOptions options)
@@ -66,11 +66,15 @@ public static class CreatorCheckerHelper
 
     private static void CheckFileSize(CreatorOptions options)
     {
-        var actualFileSize = new FileInfo(options.SourceFilePath).Length;
+        var sourceFileInfo = new FileInfo(options.SourceFilePath);
+        var exceptionNotFound = $"Looks like source file {sourceFileInfo.FullName} not found.";
+        if (!sourceFileInfo.Exists) throw new FileNotFoundException(exceptionNotFound);
+        var exceptionIsEmpty = $"Looks like source file {sourceFileInfo.FullName} is empty.";
+        if (sourceFileInfo.Length == 0) throw new IOException(exceptionIsEmpty);
         var min = options.SourceSizeBytes * (1 - (double)PredefinedConstants.FileSizeCheckDeviationPercentage / 100);
         var max = options.SourceSizeBytes * (1 + (double)PredefinedConstants.FileSizeCheckDeviationPercentage / 100);
-        string exceptionMessage = "Looks like source file has an invalid size.";
-        if ((actualFileSize < min) || (max < actualFileSize)) throw new IOException(exceptionMessage);
+        var exceptionMessage = $"Looks like source file {sourceFileInfo.FullName} has an invalid size.";
+        if ((sourceFileInfo.Length < min) || (max < sourceFileInfo.Length)) throw new IOException(exceptionMessage);
         Console.WriteLine("File size is OK.");
     }
 
@@ -87,104 +91,7 @@ public static class CreatorCheckerHelper
         Console.WriteLine("Encoding BOM is OK.");
     }
 
-    private static void CheckRowsPattern(CreatorOptions options)
-    {
-        var encoding = Encoding.GetEncoding(options.SourceEncodingName);
-        using var streamReader = new StreamReader(options.SourceFilePath, encoding);
-        var exceptionMessage = "Looks like the source file is empty.";
-        if (streamReader.EndOfStream) throw new FileLoadException(exceptionMessage);
-
-        const int stateRowStart = 0;
-        const int stateNumber = 1;
-        const int stateDelimiter = 2;
-        const int stateString = 3;
-        const int stateEnding = 4;
-        const int stateRowFinish = 5;
-
-        var stateCurrent = stateRowStart;
-        long symbolIndexInsideState = 0;
-        long symbolIndexInsideFile = 0;
-        exceptionMessage = "Looks like the source file rows format is broken in position {0}.";
-
-        while (!streamReader.EndOfStream && (stateCurrent != stateRowFinish))
-        {
-            var nextChar = (char)streamReader.Read();
-            switch (stateCurrent)
-            {
-                case stateString:
-                    {
-                        if (PredefinedConstants.SourceRowEnding[0] == nextChar)
-                        {
-                            stateCurrent = (PredefinedConstants.SourceRowEnding.Length > 1 ? stateEnding : stateRowFinish);
-                            symbolIndexInsideState = 0;
-                        }
-                        break;
-                    }
-                case stateNumber:
-                    {
-                        if (PredefinedConstants.SourcePartsDelimiter[0] == nextChar)
-                        {
-                            stateCurrent = (PredefinedConstants.SourcePartsDelimiter.Length > 1 ? stateDelimiter : stateString);
-                            symbolIndexInsideState = 0;
-                            break;
-                        }
-                        if (PredefinedConstants.NumberPartStopSymbols.Contains(nextChar))
-                        {
-                            throw new FileLoadException(string.Format(exceptionMessage, symbolIndexInsideFile));
-                        }
-                        break;
-                    }
-                case stateRowStart:
-                    {
-                        if (PredefinedConstants.NumberPartStopSymbols.Contains(nextChar))
-                        {
-                            throw new FileLoadException(string.Format(exceptionMessage, symbolIndexInsideFile));
-                        }
-                        stateCurrent = stateNumber;
-                        break;
-                    }
-                case stateDelimiter:
-                    {
-                        if (symbolIndexInsideState == PredefinedConstants.SourcePartsDelimiter.Length)
-                        {
-                            if (PredefinedConstants.StringPartStopSymbols.Contains(nextChar))
-                            {
-                                throw new FileLoadException(string.Format(exceptionMessage, symbolIndexInsideFile));
-                            }
-                            stateCurrent = stateString;
-                            symbolIndexInsideState = 0;
-                            break;
-                        }
-                        if (PredefinedConstants.SourcePartsDelimiter[(int)symbolIndexInsideState] != nextChar)
-                        {
-                            throw new FileLoadException(string.Format(exceptionMessage, symbolIndexInsideFile));
-                        };
-                        break;
-                    }
-                case stateEnding:
-                    {
-                        if (PredefinedConstants.SourceRowEnding[(int)symbolIndexInsideState] != nextChar)
-                        {
-                            throw new FileLoadException(string.Format(exceptionMessage, symbolIndexInsideFile));
-                        }
-                        if (symbolIndexInsideState == PredefinedConstants.SourceRowEnding.Length - 1)
-                        {
-                            stateCurrent = stateRowFinish;
-                            break;
-                        }
-                        break;
-                    }
-            }
-            ++symbolIndexInsideFile;
-            ++symbolIndexInsideState;
-        }
-
-        if ((stateCurrent != stateRowFinish) && (stateCurrent != stateString))
-            throw new FileLoadException(exceptionMessage);
-        Console.WriteLine("Rows pattern is OK.");
-    }
-
-    private static void CheckStringsDuplication(CreatorOptions options)
+    private static void CheckRowsPattern(CreatorOptions options, out LongFileIndex index)
     {
         var indexerOptions = new IndexerOptions()
         {
@@ -193,16 +100,25 @@ public static class CreatorCheckerHelper
             IndexFilePath = Path.Combine(options.ProcessingTemporaryFolder, $"index_{Guid.NewGuid()}.txt")
         };
 
-        using var longFileIndex = new LongFileIndex(indexerOptions, true, true);
+        index = new LongFileIndex(indexerOptions, true, true);
+
+        Console.WriteLine("Rows pattern is OK.");
+    }
+
+    private static void CheckStringsDuplication(CreatorOptions options, LongFileIndex index)
+    {
+        using var longFileIndex = index;
         var comparer = new IndexBlockComparer();
         (longFileIndex as ILargeList<IndexBlock>).Sort(0, longFileIndex.LongCount(), comparer);
 
         for (long i = 0; i < longFileIndex.LongCount() - 1; ++i)
+        {
             if (IndexBlockComparer.StringPartCoparison(longFileIndex[i], longFileIndex[i + 1]) == 0)
             {
                 Console.WriteLine("Strings duplication is OK.");
                 return;
             }
+        }
 
         throw new FileLoadException("File must contain rows with repeating string part.");
     }
