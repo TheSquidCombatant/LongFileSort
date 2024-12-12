@@ -52,7 +52,9 @@ public static class IndexBlockParser
 
         while (indexFileStream.Position < indexFileStream.Length)
         {
-            indexFileStream.Read(indexBuffer);
+            var bytesRead = indexFileStream.Read(indexBuffer);
+            const string exceptionMessage = "Not enough bytes for read index block.";
+            if (bytesRead != IndexBlock.Data.BlockSizeBytes) throw new IOException(exceptionMessage);
             var block = new IndexBlock.Data(indexBuffer);
 
             WriteIndexBlock(
@@ -88,19 +90,32 @@ public static class IndexBlockParser
         var expectedPreamble = encoding.GetPreamble();
         var actualPreamble = new byte[expectedPreamble.Length];
         sourceFileStream.Read(actualPreamble, 0, actualPreamble.Length);
-        long streamCurrentPosition = (expectedPreamble.SequenceEqual(actualPreamble) ? actualPreamble.Length : 0);
+        long currentSymbolStreamPosition = (expectedPreamble.SequenceEqual(actualPreamble) ? actualPreamble.Length : 0);
         sourceFileStream.Position = 0;
 
         using var sourceStreamReader = new StreamReader(sourceFileStream, encoding);
+        long currentSymbolNumber = 0;
 
-        var fileIndexBlock = ReadIndexBlock(sourceStreamReader, ref streamCurrentPosition, encoding, sourceFilePath);
+        var fileIndexBlock = ReadIndexBlock(
+            sourceStreamReader,
+            ref currentSymbolStreamPosition,
+            encoding,
+            sourceFilePath,
+            ref currentSymbolNumber);
+
         var exceptionMessage = $"Looks like the source file {sourceFilePath} is empty.";
         if (fileIndexBlock == null) throw new FileLoadException(exceptionMessage);
 
         while (fileIndexBlock != null)
         {
             indexFileStream.Write(fileIndexBlock.ToByteArray());
-            fileIndexBlock = ReadIndexBlock(sourceStreamReader, ref streamCurrentPosition, encoding, sourceFilePath);
+
+            fileIndexBlock = ReadIndexBlock(
+                sourceStreamReader,
+                ref currentSymbolStreamPosition,
+                encoding,
+                sourceFilePath,
+                ref currentSymbolNumber);
         }
 
         indexFileStream.Flush(true);
@@ -108,9 +123,10 @@ public static class IndexBlockParser
 
     private static IndexBlock.Data ReadIndexBlock(
         StreamReader streamReader,
-        ref long streamCurrentPosition,
+        ref long currentSymbolStreamPosition,
         Encoding encoding,
-        string sourceFilePath)
+        string sourceFilePath,
+        ref long currentSymbolNumber)
     {
         long numberStartPosition = 0;
         long numberEndPosition = 0;
@@ -127,65 +143,76 @@ public static class IndexBlockParser
         const int stateEnding = 4;
         const int stateRowFinish = 5;
 
-        var stateCurrent = stateRowStart;
-        long stateStartPosition = streamCurrentPosition;
-        long stateEndPosition = 0;
-        long symbolIndexInsideState = 0;
+        int stateCurrent = stateRowStart;
+        int symbolIndexInsideState = 0;
+        long stateStartPosition = currentSymbolStreamPosition;
         long numberPartValueItself = long.MinValue;
 
-        var exceptionMessage = $"Looks like the source file {sourceFilePath} is broken.";
+        const string exceptionMessage = "Looks like the source file {0} has broken rows format in position {1}";
 
         while (!streamReader.EndOfStream && (stateCurrent != stateRowFinish))
         {
-            stateEndPosition = streamCurrentPosition;
-            var nextChar = (char)streamReader.Read();
+            var currentSymbol = (char)streamReader.Read();
+            ++currentSymbolNumber;
+
             switch (stateCurrent)
             {
                 case stateString:
                     {
-                        if (PredefinedConstants.SourceRowEnding[0] == nextChar)
+                        if (PredefinedConstants.SourceRowEnding[0] == currentSymbol)
                         {
                             stringStartPosition = stateStartPosition;
-                            stringEndPosition = stateEndPosition;
-                            stateCurrent = (PredefinedConstants.SourceRowEnding.Length > 1 ? stateEnding : stateRowFinish);
-                            symbolIndexInsideState = 0;
-                            stateStartPosition = stateEndPosition;
+                            stringEndPosition = currentSymbolStreamPosition;
+                            if (PredefinedConstants.SourceRowEnding.Length > 1)
+                            {
+                                stateCurrent = stateEnding;
+                                symbolIndexInsideState = 1;
+                                break;
+                            }
+                            stateCurrent = stateRowFinish;
                             break;
                         }
                         if (symbolIndexInsideState < cachedStringStart.Length)
                         {
-                            cachedStringStart[symbolIndexInsideState] = nextChar;
+                            cachedStringStart[symbolIndexInsideState] = currentSymbol;
+                            ++symbolIndexInsideState;
                         }
                         break;
                     }
                 case stateNumber:
                     {
-                        if (PredefinedConstants.SourcePartsDelimiter[0] == nextChar)
+                        if (PredefinedConstants.SourcePartsDelimiter[0] == currentSymbol)
                         {
                             numberStartPosition = stateStartPosition;
-                            numberEndPosition = stateEndPosition;
-                            stateCurrent = (PredefinedConstants.SourcePartsDelimiter.Length > 1 ? stateDelimiter : stateString);
+                            numberEndPosition = currentSymbolStreamPosition;
+                            if (PredefinedConstants.SourcePartsDelimiter.Length > 1)
+                            {
+                                stateCurrent = stateDelimiter;
+                                symbolIndexInsideState = 1;
+                                break;
+                            }
+                            stateCurrent = stateString;
                             symbolIndexInsideState = 0;
-                            stateStartPosition = stateEndPosition;
+                            stateStartPosition = currentSymbolStreamPosition + encoding.GetByteCount(new[] { currentSymbol });
                             break;
                         }
-                        if (PredefinedConstants.NumberPartStopSymbols.Contains(nextChar))
+                        if (PredefinedConstants.NumberPartStopSymbols.Contains(currentSymbol))
                         {
-                            throw new FileLoadException(exceptionMessage);
+                            throw new FileLoadException(string.Format(exceptionMessage, sourceFilePath, currentSymbolNumber));
                         }
                         if (numberPartValueItself == long.MinValue) break;
-                        var newDigit = long.Parse(new ReadOnlySpan<char>([nextChar]));
+                        var newDigit = long.Parse(new ReadOnlySpan<char>([currentSymbol]));
                         if ((long.MaxValue - newDigit) / 10 < numberPartValueItself) numberPartValueItself = long.MinValue;
                         else numberPartValueItself = numberPartValueItself * 10 + newDigit;
                         break;
                     }
                 case stateRowStart:
                     {
-                        if (PredefinedConstants.NumberPartStopSymbols.Contains(nextChar))
+                        if (PredefinedConstants.NumberPartStopSymbols.Contains(currentSymbol))
                         {
-                            throw new FileLoadException(exceptionMessage);
+                            throw new FileLoadException(string.Format(exceptionMessage, sourceFilePath, currentSymbolNumber));
                         }
-                        var success = long.TryParse(new ReadOnlySpan<char>([nextChar]), out numberPartValueItself);
+                        var success = long.TryParse(new ReadOnlySpan<char>([currentSymbol]), out numberPartValueItself);
                         if (!success) numberPartValueItself = long.MinValue;
                         stateCurrent = stateNumber;
                         break;
@@ -194,27 +221,28 @@ public static class IndexBlockParser
                     {
                         if (symbolIndexInsideState == PredefinedConstants.SourcePartsDelimiter.Length)
                         {
-                            if (PredefinedConstants.StringPartStopSymbols.Contains(nextChar))
+                            if (PredefinedConstants.StringPartStopSymbols.Contains(currentSymbol))
                             {
-                                throw new FileLoadException(exceptionMessage);
+                                throw new FileLoadException(string.Format(exceptionMessage, sourceFilePath, currentSymbolNumber));
                             }
                             stateCurrent = stateString;
-                            symbolIndexInsideState = 0;
-                            stateStartPosition = stateEndPosition;
-                            if (cachedStringStart.Length > 0) cachedStringStart[0] = nextChar;
+                            symbolIndexInsideState = 1;
+                            stateStartPosition = currentSymbolStreamPosition;
+                            if (cachedStringStart.Length > 0) cachedStringStart[0] = currentSymbol;
                             break;
                         }
-                        if (PredefinedConstants.SourcePartsDelimiter[(int)symbolIndexInsideState] != nextChar)
+                        if (PredefinedConstants.SourcePartsDelimiter[symbolIndexInsideState] != currentSymbol)
                         {
-                            throw new FileLoadException(exceptionMessage);
+                            throw new FileLoadException(string.Format(exceptionMessage, sourceFilePath, currentSymbolNumber));
                         };
+                        ++symbolIndexInsideState;
                         break;
                     }
                 case stateEnding:
                     {
-                        if (PredefinedConstants.SourceRowEnding[(int)symbolIndexInsideState] != nextChar)
+                        if (PredefinedConstants.SourceRowEnding[symbolIndexInsideState] != currentSymbol)
                         {
-                            throw new FileLoadException(exceptionMessage);
+                            throw new FileLoadException(string.Format(exceptionMessage, sourceFilePath, currentSymbolNumber));
                         }
                         if (symbolIndexInsideState == PredefinedConstants.SourceRowEnding.Length - 1)
                         {
@@ -224,12 +252,15 @@ public static class IndexBlockParser
                         break;
                     }
             }
-            ++symbolIndexInsideState;
-            streamCurrentPosition += encoding.GetByteCount(new[] { nextChar });
+
+            currentSymbolStreamPosition += encoding.GetByteCount(new[] { currentSymbol });
         }
 
-        if (stateCurrent == stateRowStart) return null;
-        if (stateCurrent != stateRowFinish) throw new FileLoadException(exceptionMessage);
+        if (stateCurrent == stateRowStart)
+            return null;
+
+        if (stateCurrent != stateRowFinish)
+            throw new FileLoadException(string.Format(exceptionMessage, sourceFilePath, currentSymbolNumber));
 
         if (numberPartValueItself != long.MinValue)
         {
@@ -237,12 +268,14 @@ public static class IndexBlockParser
             numberEndPosition = 0;
         }
 
-        return new IndexBlock.Data(
+        var result = new IndexBlock.Data(
             cachedStringStart,
             numberStartPosition,
             numberEndPosition,
             stringStartPosition,
             stringEndPosition);
+
+        return result;
     }
 
     private static void WriteIndexBlock(

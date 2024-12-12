@@ -6,6 +6,6 @@
 		<TargetFramework>net8.0</TargetFramework>
 		<RootNamespace>LongFileSort.Utilities</RootNamespace>
 		<AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+		<CheckForOverflowUnderflow>True</CheckForOverflowUnderflow>
 	</PropertyGroup>
-
 </Project>
