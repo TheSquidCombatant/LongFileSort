@@ -1,4 +1,5 @@
-﻿using LongFileSort.Utilities.Options;
+﻿using LongFileSort.Utilities.Indexer;
+using LongFileSort.Utilities.Options;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -51,9 +52,9 @@ public static class ListExtensions
         long count,
         IComparer<T> comparer)
     {
-        InnerSortParallel(index, index + count - 1, 1);
+        InnerSortParallel(index, index + count - 1, comparer, degree: 1);
 
-        void InnerSortParallel(long leftBorder, long rightBorder, int degree)
+        void InnerSortParallel(long leftBorder, long rightBorder, IComparer<T> comparer, int degree)
         {
             if (leftBorder >= rightBorder) return;
             var mid = largeList[(leftBorder + rightBorder) / 2];
@@ -73,9 +74,9 @@ public static class ListExtensions
             }
             else
             {
-                void action() => InnerSortParallel(leftBorder, right, degree + 1);
+                void action() => InnerSortParallel(leftBorder, right, comparer, degree + 1);
                 var task = Task.Factory.StartNew(action, TaskCreationOptions.LongRunning);
-                InnerSortParallel(left, rightBorder, degree + 1);
+                InnerSortParallel(left, rightBorder, comparer, degree + 1);
                 task.Wait();
             }
         }
@@ -142,9 +143,9 @@ public interface ILargeList<T>
     /// </remarks>
     public void Sort(long index, long count, IComparer<T> comparer)
     {
-        InnerSort(index, index + count - 1);
+        InnerQuickSort(index, index + count - 1, comparer);
 
-        void InnerSort(long leftBorder, long rightBorder)
+        void InnerQuickSort(long leftBorder, long rightBorder, IComparer<T> comparer)
         {
             if (leftBorder >= rightBorder) return;
             var mid = this[(leftBorder + rightBorder) / 2];
@@ -157,8 +158,23 @@ public interface ILargeList<T>
                 if (left <= right) this.Swap(left++, right--);
             }
 
-            InnerSort(leftBorder, right);
-            InnerSort(left, rightBorder);
+            const long threshold = PredefinedConstants.SortBufferingThreshold;
+
+            if (right - leftBorder > threshold) InnerQuickSort(leftBorder, right, comparer);
+            else InnerCacheSort(leftBorder, right, comparer);
+
+            if (rightBorder - left > threshold) InnerQuickSort(left, rightBorder, comparer);
+            else InnerCacheSort(left, rightBorder, comparer);
+        }
+
+        void InnerCacheSort(long leftBorder, long rightBorder, IComparer<T> comparer)
+        {
+            if (leftBorder >= rightBorder) return;
+            var count = (int)(rightBorder - leftBorder + 1);
+            var buffer = GC.AllocateUninitializedArray<T>(count);
+            for (int i = 0; i < count; ++i) buffer[i] = this[leftBorder + i];
+            Array.Sort(buffer, comparer);
+            for (int i = 0; i < count; ++i) this[leftBorder + i] = buffer[i];
         }
     }
 }
