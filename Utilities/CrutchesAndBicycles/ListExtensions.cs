@@ -1,7 +1,7 @@
-﻿using LongFileSort.Utilities.Indexer;
-using LongFileSort.Utilities.Options;
+﻿using LongFileSort.Utilities.Options;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace LongFileSort.Utilities.CrutchesAndBicycles;
@@ -81,6 +81,11 @@ public static class ListExtensions
             }
         }
     }
+
+    /// <summary>
+    /// Optional list configuration parameters.
+    /// </summary>
+    public class ListHintsAttribute(long threshold) : Attribute { public long Threshold => threshold; }
 }
 
 /// <summary>
@@ -143,6 +148,10 @@ public interface ILargeList<T>
     /// </remarks>
     public void Sort(long index, long count, IComparer<T> comparer)
     {
+        var listHintsAttribute = typeof(T).GetCustomAttribute<ListExtensions.ListHintsAttribute>();
+        listHintsAttribute ??= this.GetType().GetCustomAttribute<ListExtensions.ListHintsAttribute>();
+        var threshold = listHintsAttribute?.Threshold ?? 16384;
+
         InnerQuickSort(index, index + count - 1, comparer);
 
         void InnerQuickSort(long leftBorder, long rightBorder, IComparer<T> comparer)
@@ -157,8 +166,6 @@ public interface ILargeList<T>
                 while (comparer.Compare(this[right], mid) > 0) --right;
                 if (left <= right) this.Swap(left++, right--);
             }
-
-            const long threshold = PredefinedConstants.SortBufferingThreshold;
 
             if (right - leftBorder > threshold) InnerQuickSort(leftBorder, right, comparer);
             else InnerCacheSort(leftBorder, right, comparer);

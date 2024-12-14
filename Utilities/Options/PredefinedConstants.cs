@@ -35,6 +35,4 @@ internal static class PredefinedConstants
     public static readonly int MaximumDegreeOfParallelism = Environment.ProcessorCount;
 
     public static readonly byte FileSizeCheckDeviationPercentage = 5;
-
-    public const int SortBufferingThreshold = 16384;
 }
