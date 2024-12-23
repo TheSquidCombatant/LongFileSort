@@ -1,8 +1,7 @@
-﻿using LongFileSort.Utilities.Options;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Threading.Tasks;
+using static LongFileSort.Utilities.CrutchesAndBicycles.ListExtensions;
 
 namespace LongFileSort.Utilities.CrutchesAndBicycles;
 
@@ -67,7 +66,7 @@ public static class ListExtensions
                 if (left <= right) largeList.Swap(left++, right--);
             }
 
-            if (Math.Pow(2, degree) > PredefinedConstants.MaximumDegreeOfParallelism)
+            if (Math.Pow(2, degree) > Environment.ProcessorCount)
             {
                 largeList.Sort(leftBorder, right - leftBorder + 1, comparer);
                 largeList.Sort(left, rightBorder - left + 1, comparer);
@@ -83,9 +82,9 @@ public static class ListExtensions
     }
 
     /// <summary>
-    /// Optional list configuration parameters.
+    /// Optional list configuration interface.
     /// </summary>
-    public class ListHintsAttribute(long threshold) : Attribute { public long Threshold => threshold; }
+    public interface IListHints { public object GetHintValue(string key); }
 }
 
 /// <summary>
@@ -148,9 +147,10 @@ public interface ILargeList<T>
     /// </remarks>
     public void Sort(long index, long count, IComparer<T> comparer)
     {
-        var listHintsAttribute = typeof(T).GetCustomAttribute<ListExtensions.ListHintsAttribute>();
-        listHintsAttribute ??= this.GetType().GetCustomAttribute<ListExtensions.ListHintsAttribute>();
-        var threshold = listHintsAttribute?.Threshold ?? 16384;
+        const string thresholdHintName = "BufferingElementsLimit";
+        var thresholdHint = (this is IListHints listHints ? listHints.GetHintValue(thresholdHintName) : null);
+        const int thresholdDefault = 0;
+        var threshold = (thresholdHint is int thresholdPreset ? thresholdPreset : thresholdDefault);
 
         InnerQuickSort(index, index + count - 1, comparer);
 

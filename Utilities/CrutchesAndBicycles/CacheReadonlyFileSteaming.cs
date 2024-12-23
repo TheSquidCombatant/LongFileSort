@@ -1,5 +1,4 @@
-﻿using LongFileSort.Utilities.Options;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -10,28 +9,25 @@ namespace LongFileSort.Utilities.CrutchesAndBicycles;
 
 public class CacheReadonlyFileSteaming : IDisposable
 {
-    private readonly int _pageSize = PredefinedConstants.FileStreamBufferPageSize;
-
-    private readonly int _pagesCount = PredefinedConstants.FileStreamReadonlyBufferPagesCount;
-
-    private readonly ConcurrentDictionary<int, Dictionary<long, LinkedListNode<Page>>> _links = new();
-
-    private readonly ConcurrentDictionary<int, LinkedList<Page>> _cache = new();
-
-    private readonly ConcurrentDictionary<int, List<Pair>> _pool = new();
-
+    private readonly int _pageSize;
+    private readonly int _pagesCount;
     private readonly string _filePath;
 
-    private bool _isDisposed = false;
-
+    private readonly ConcurrentDictionary<int, Dictionary<long, LinkedListNode<Page>>> _links = new();
+    private readonly ConcurrentDictionary<int, LinkedList<Page>> _cache = new();
+    private readonly ConcurrentDictionary<int, List<Pair>> _pool = new();
     private readonly ConcurrentDictionary<int, FileStream> _stream = new();
+
+    private int _isDisposed = 0;
 
     private class Pair { public bool IsBusy; public FileStream Stream; }
 
     private class Page { public long Position; public int Length; public byte[] Data; }
 
-    public CacheReadonlyFileSteaming(string filePath)
+    public CacheReadonlyFileSteaming(int pageSizeBytes, int pagesCountForEachThread, string filePath)
     {
+        this._pageSize = pageSizeBytes;
+        this._pagesCount = pagesCountForEachThread;
         this._filePath = filePath;
     }
 
@@ -40,7 +36,7 @@ public class CacheReadonlyFileSteaming : IDisposable
     /// </summary>
     public int ReadThroughCache(long position, byte[] buffer)
     {
-        var pagePosition = (position / _pageSize) * _pageSize;
+        var pagePosition = (position / this._pageSize) * this._pageSize;
         var page = this.GetPage(pagePosition);
         if (page.Length == 0) return 0;
 
@@ -52,9 +48,9 @@ public class CacheReadonlyFileSteaming : IDisposable
 
         var readCountTotal = readCount;
         var bufferPosition = readCount;
-        pagePosition += _pageSize;
+        pagePosition += this._pageSize;
 
-        while ((page.Length == _pageSize) && (bufferPosition < buffer.Length))
+        while ((page.Length == this._pageSize) && (bufferPosition < buffer.Length))
         {
             page = this.GetPage(pagePosition);
             if (page.Length == 0) return (int)readCountTotal;
@@ -65,7 +61,7 @@ public class CacheReadonlyFileSteaming : IDisposable
 
             readCountTotal += readCount;
             bufferPosition += readCount;
-            pagePosition += _pageSize;
+            pagePosition += this._pageSize;
         }
 
         return (int)readCountTotal;
@@ -141,7 +137,7 @@ public class CacheReadonlyFileSteaming : IDisposable
             return node.Value;
         }
 
-        if (cache.Count == _pagesCount)
+        if (cache.Count == this._pagesCount)
         {
             node = cache.First;
             var pageToUpdate = node.Value;
@@ -160,7 +156,7 @@ public class CacheReadonlyFileSteaming : IDisposable
         var page = new Page()
         {
             Position = position,
-            Data = new byte[_pageSize]
+            Data = new byte[this._pageSize]
         };
 
         ReadPage(threadId, page);
@@ -172,7 +168,7 @@ public class CacheReadonlyFileSteaming : IDisposable
     private void ReadPage(int threadId, Page page)
     {
         FileStream action(int c) => new(
-            _filePath,
+            this._filePath,
             FileMode.OpenOrCreate,
             FileAccess.Read,
             FileShare.ReadWrite);
@@ -185,7 +181,7 @@ public class CacheReadonlyFileSteaming : IDisposable
 
     public void Dispose()
     {
-        if (this._isDisposed) return;
+        if (Interlocked.Exchange(ref this._isDisposed, 1) == 1) return;
 
         lock (this._pool)
             foreach (var pool in this._pool.Values)
@@ -195,7 +191,5 @@ public class CacheReadonlyFileSteaming : IDisposable
         lock (this._stream)
             foreach (var stream in this._stream.Values)
                 stream.Dispose();
-
-        this._isDisposed = true;
     }
 }

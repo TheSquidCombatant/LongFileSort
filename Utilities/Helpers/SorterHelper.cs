@@ -34,12 +34,17 @@ public static class SorterHelper
 
         if (!File.Exists(options.TargetFilePath))
             File.Create(options.TargetFilePath, 1, FileOptions.RandomAccess).Close();
+
+        if (options.CacheSizeLimitMegabytes < 1)
+            throw new ArgumentOutOfRangeException(nameof(options.CacheSizeLimitMegabytes));
     }
 
     private static void GenerateSortedFile(SorterOptions options)
     {
         var indexerOptions = new IndexerOptions()
         {
+            CacheSizeLimitMegabytes = options.CacheSizeLimitMegabytes,
+            EnableParallelExecution = options.EnableParallelExecution,
             SourceFilePath = options.SourceFilePath,
             SourceEncoding = Encoding.GetEncoding(options.SourceEncodingName),
             IndexFilePath = Path.Combine(options.ProcessingTemporaryFolder, $"index_{Guid.NewGuid()}.txt")
@@ -47,7 +52,8 @@ public static class SorterHelper
 
         using var longFileIndex = new LongFileIndex(indexerOptions, true, false);
         var comparer = new IndexBlockComparer();
-        longFileIndex.SortParallel(0, longFileIndex.LongCount(), comparer);
+        if (options.EnableParallelExecution) longFileIndex.SortParallel(0, longFileIndex.LongCount(), comparer);
+        else (longFileIndex as ILargeList<IndexBlock>).Sort(0, longFileIndex.LongCount(), comparer);
         longFileIndex.Dispose();
 
         IndexBlockParser.ConvertIndexToTargetFile(

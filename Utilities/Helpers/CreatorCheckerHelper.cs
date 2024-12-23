@@ -95,9 +95,11 @@ public static class CreatorCheckerHelper
     {
         var indexerOptions = new IndexerOptions()
         {
+            CacheSizeLimitMegabytes = 4,
+            EnableParallelExecution = false,
             SourceFilePath = options.SourceFilePath,
             SourceEncoding = Encoding.GetEncoding(options.SourceEncodingName),
-            IndexFilePath = Path.Combine(options.ProcessingTemporaryFolder, $"index_{Guid.NewGuid()}.txt")
+            IndexFilePath = Path.Combine(options.ProcessingTemporaryFolder, $"index_{Guid.NewGuid()}.txt"),
         };
 
         index = new LongFileIndex(indexerOptions, true, true);

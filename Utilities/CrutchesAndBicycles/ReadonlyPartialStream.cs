@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace LongFileSort.Utilities.CrutchesAndBicycles;
@@ -29,7 +30,7 @@ internal class ReadonlyPartialStream : Stream
     /// </summary>
     private readonly bool _closeUnderlyingStream;
 
-    private bool _isDisposed = false;
+    private int _isDisposed = 0;
 
     public event Action<ReadonlyPartialStream> OnClose;
 
@@ -53,8 +54,7 @@ internal class ReadonlyPartialStream : Stream
 
     public override ValueTask DisposeAsync()
     {
-        if (this._isDisposed) return ValueTask.CompletedTask;
-        this._isDisposed = true;
+        if (Interlocked.Exchange(ref this._isDisposed, 1) == 1) return ValueTask.CompletedTask;
         this.OnClose?.Invoke(this);
         if (!this._closeUnderlyingStream) return ValueTask.CompletedTask;
         return this._innerStream.DisposeAsync();

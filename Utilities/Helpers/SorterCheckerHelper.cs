@@ -39,6 +39,9 @@ public static class SorterCheckerHelper
 
         if (!File.Exists(options.TargetFilePath))
             File.Create(options.TargetFilePath, 1, FileOptions.RandomAccess).Close();
+
+        if (options.CacheSizeLimitMegabytes < 1)
+            throw new ArgumentOutOfRangeException(nameof(options.CacheSizeLimitMegabytes));
     }
 
     private static void CheckEncodingBom(SorterOptions options)
@@ -52,7 +55,7 @@ public static class SorterCheckerHelper
         var actualPreambleTarget = new byte[expectedPreamble.Length];
         streamReaderTarget.BaseStream.Read(actualPreambleTarget, 0, actualPreambleTarget.Length);
         var exceptionMessage = "Looks like target file encoding BOM does not match source file encoding BOM.";
-        if (expectedPreamble.SequenceEqual(actualPreambleSource) != expectedPreamble.SequenceEqual(actualPreambleTarget))        
+        if (expectedPreamble.SequenceEqual(actualPreambleSource) != expectedPreamble.SequenceEqual(actualPreambleTarget))
             throw new FileLoadException(exceptionMessage);
         Console.WriteLine("Encoding BOM is OK.");
     }
@@ -61,6 +64,8 @@ public static class SorterCheckerHelper
     {
         var targetOptions = new IndexerOptions()
         {
+            CacheSizeLimitMegabytes = options.CacheSizeLimitMegabytes,
+            EnableParallelExecution = options.EnableParallelExecution,
             SourceFilePath = options.TargetFilePath,
             SourceEncoding = Encoding.GetEncoding(options.SourceEncodingName),
             IndexFilePath = Path.Combine(options.ProcessingTemporaryFolder, $"index_{Guid.NewGuid()}.txt")
@@ -70,6 +75,8 @@ public static class SorterCheckerHelper
 
         var sourceOptions = new IndexerOptions()
         {
+            CacheSizeLimitMegabytes = options.CacheSizeLimitMegabytes,
+            EnableParallelExecution = options.EnableParallelExecution,
             SourceFilePath = options.SourceFilePath,
             SourceEncoding = Encoding.GetEncoding(options.SourceEncodingName),
             IndexFilePath = Path.Combine(options.ProcessingTemporaryFolder, $"index_{Guid.NewGuid()}.txt")
@@ -111,12 +118,13 @@ public static class SorterCheckerHelper
     private static void CheckRowsOccurrences(SorterOptions options, LongFileIndex source, LongFileIndex target)
     {
         var comparer = new IndexBlockComparer();
-        (source as ILargeList<IndexBlock>).Sort(0, source.LongCount(), comparer);
+        if (options.EnableParallelExecution) source.SortParallel(0, source.LongCount(), comparer);
+        else (source as ILargeList<IndexBlock>).Sort(0, source.LongCount(), comparer);
 
         var sourceIndex = 0;
         var targetIndex = 0;
 
-        while((sourceIndex < source.LongCount()) && (targetIndex < target.LongCount()))
+        while ((sourceIndex < source.LongCount()) && (targetIndex < target.LongCount()))
         {
             var sourceElement = source[sourceIndex];
             var sourceEnd = sourceIndex + 1;

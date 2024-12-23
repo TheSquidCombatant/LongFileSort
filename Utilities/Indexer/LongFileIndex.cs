@@ -1,18 +1,23 @@
 ﻿using LongFileSort.Utilities.CrutchesAndBicycles;
 using LongFileSort.Utilities.Options;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Threading;
+using static LongFileSort.Utilities.CrutchesAndBicycles.ListExtensions;
 
 namespace LongFileSort.Utilities.Indexer;
 
 /// <summary>
 /// Core of large file processing mechanism.
 /// </summary>
-public class LongFileIndex : ILargeList<IndexBlock>, IDisposable
+public class LongFileIndex : ILargeList<IndexBlock>, IListHints, IDisposable
 {
+    private Dictionary<string, object> _listHints = new();
+
     private bool _cleanupIndexFileWhenClosed;
 
-    private bool _isDisposed = false;
+    private int _isDisposed = 0;
 
     private long _longCount = 0;
 
@@ -47,6 +52,8 @@ public class LongFileIndex : ILargeList<IndexBlock>, IDisposable
     /// </summary>
     public void Dispose() => this.FlushIndex();
 
+    public object GetHintValue(string key) => this._listHints.TryGetValue(key, out var value) ? value : null;
+
     ~LongFileIndex() => this.FlushIndex();
 
     /// <summary>
@@ -76,19 +83,67 @@ public class LongFileIndex : ILargeList<IndexBlock>, IDisposable
 
     private void FlushIndex()
     {
-        if (this._isDisposed) return;
+        if (Interlocked.Exchange(ref this._isDisposed, 1) == 1) return;
         this.IndexFileCache.Dispose();
         this.SourceFileCache.Dispose();
         if (this._cleanupIndexFileWhenClosed) File.Delete(this.IndexerOptions.IndexFilePath);
-        this._isDisposed = true;
     }
 
     private void BuildIndex(IndexerOptions indexerOptions, bool rebuild)
     {
         this.IndexerOptions = indexerOptions;
-        this.IndexFileCache = new CacheFileSteaming(indexerOptions.IndexFilePath);
-        this.SourceFileCache = new CacheReadonlyFileSteaming(indexerOptions.SourceFilePath);
+        this.InitListHits();
+        this.InitListCaches();
+        this.InitIndexFiles(rebuild);
+    }
 
+    private void InitListHits()
+    {
+        var totalMemoryBytes = this.IndexerOptions.CacheSizeLimitMegabytes * 1024 * 1024;
+        var isParallel = this.IndexerOptions.EnableParallelExecution;
+        var momoryForListBufferingBytes = totalMemoryBytes / 2;
+        var bufferingListElements = momoryForListBufferingBytes / IndexBlock.Data.BlockSizeBytes;
+        if (isParallel) bufferingListElements /= Environment.ProcessorCount;
+        const string thresholdHintName = "BufferingElementsLimit";
+        this._listHints.Add(thresholdHintName, bufferingListElements);
+    }
+
+    private void InitListCaches()
+    {
+        const int bytesInMegabyte = 1024 * 1024;
+        const int totalMemoryParts = 4;
+        const int minPageSizeBytes = 1024;
+        const int minPagesCount = 1;
+
+        var totalMemoryBytes = this.IndexerOptions.CacheSizeLimitMegabytes * bytesInMegabyte;
+        var isParallel = this.IndexerOptions.EnableParallelExecution;
+        var momoryForOneFileFuffering = totalMemoryBytes / totalMemoryParts;
+
+        var pagesCountForEachThread = (double)PredefinedConstants.DefaultFileCachePagesCount;
+        var pageSize = (double)PredefinedConstants.DefaultFileCachePageSize;
+        var momeryRatio = momoryForOneFileFuffering / (pagesCountForEachThread * pageSize);
+
+        pagesCountForEachThread *= momeryRatio;
+        if (pagesCountForEachThread < minPagesCount) pagesCountForEachThread = minPagesCount;
+        var pagesCountForAllThreads = pagesCountForEachThread;
+
+        if (isParallel) pagesCountForAllThreads *= Environment.ProcessorCount;
+        if (isParallel) pageSize /= Environment.ProcessorCount;
+        if (pageSize < minPageSizeBytes) pageSize = minPageSizeBytes;
+
+        this.IndexFileCache = new CacheFileSteaming(
+            (int)pageSize,
+            (int)pagesCountForAllThreads,
+            this.IndexerOptions.IndexFilePath);
+
+        this.SourceFileCache = new CacheReadonlyFileSteaming(
+            (int)pageSize,
+            (int)pagesCountForEachThread,
+            this.IndexerOptions.SourceFilePath);
+    }
+
+    private void InitIndexFiles(bool rebuild)
+    {
         if (rebuild) IndexBlockParser.ConvertSourceToIndexFile(
             this.IndexerOptions.SourceFilePath,
             this.IndexerOptions.IndexFilePath,

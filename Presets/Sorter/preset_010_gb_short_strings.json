@@ -1,4 +1,6 @@
 {
+  "CacheSizeLimitMegabytes": 20,
+  "EnableParallelExecution": true,
   "SourceFilePath": "source_010_gb_short_strings.txt",
   "SourceEncodingName": "UTF-8",
   "TargetFilePath": "target_010_gb_short_strings.txt",

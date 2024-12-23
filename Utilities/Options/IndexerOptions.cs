@@ -4,6 +4,9 @@ namespace LongFileSort.Utilities.Options;
 
 public class IndexerOptions
 {
+    public int CacheSizeLimitMegabytes { get; set; }
+
+    public bool EnableParallelExecution { get; set; }
 
     public string SourceFilePath { get; set; }
 

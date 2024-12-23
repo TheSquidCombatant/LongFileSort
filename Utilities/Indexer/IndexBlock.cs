@@ -25,7 +25,7 @@ public class IndexBlock
     {
         var length = this.IndexBlockData.NumberEndPosition - this.IndexBlockData.NumberStartPosition;
 
-        if (length < PredefinedConstants.FileStreamBufferPageSize)
+        if (length < PredefinedConstants.DefaultFileStreamBufferSize)
         {
             var buffer = new byte[length];
             var count = this.ParentIndexer.SourceFileCache.ReadThroughCache(this.IndexBlockData.NumberStartPosition, buffer);
@@ -59,7 +59,7 @@ public class IndexBlock
     {
         var length = this.IndexBlockData.StringEndPosition - this.IndexBlockData.StringStartPosition;
 
-        if (length < PredefinedConstants.FileStreamBufferPageSize)
+        if (length < PredefinedConstants.DefaultFileStreamBufferSize)
         {
             var buffer = new byte[length];
             var count = this.ParentIndexer.SourceFileCache.ReadThroughCache(this.IndexBlockData.StringStartPosition, buffer);

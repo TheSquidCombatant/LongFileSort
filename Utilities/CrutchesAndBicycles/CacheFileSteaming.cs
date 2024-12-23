@@ -1,32 +1,32 @@
-﻿using LongFileSort.Utilities.Options;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 
 namespace LongFileSort.Utilities.CrutchesAndBicycles;
 
 public class CacheFileSteaming : IDisposable
 {
-    private readonly int _pageSize = PredefinedConstants.FileStreamBufferPageSize;
-
-    private readonly int _pagesCount = PredefinedConstants.FileStreamBufferPagesCount;
+    private readonly int _pageSize;
+    private readonly int _pagesCount;
+    private readonly FileStream _stream;
 
     private readonly Dictionary<long, LinkedListNode<Page>> _links = new();
-
     private readonly LinkedList<Page> _cache = new();
 
-    private readonly string _filePath;
-
-    private bool _isDisposed = false;
-
-    private readonly FileStream _stream;
+    private int _isDisposed = 0;
 
     private class Page { public bool Changed; public long Position; public int Length; public byte[] Data; }
 
-    public CacheFileSteaming(string filePath)
+    public CacheFileSteaming(int pageSizeBytes, int pagesCountForAllThreads, string filePath)
     {
-        this._stream = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
-        this._filePath = filePath;
+        this._pageSize = pageSizeBytes;
+        this._pagesCount = pagesCountForAllThreads;
+        this._stream = new FileStream(
+            filePath,
+            FileMode.OpenOrCreate,
+            FileAccess.ReadWrite,
+            FileShare.ReadWrite);
     }
 
     /// <summary>
@@ -34,7 +34,7 @@ public class CacheFileSteaming : IDisposable
     /// </summary>
     public int ReadThroughCache(long position, byte[] buffer)
     {
-        var pagePosition = (position / _pageSize) * _pageSize;
+        var pagePosition = (position / this._pageSize) * this._pageSize;
         var page = this.GetPage(pagePosition);
         if (page.Length == 0) return 0;
 
@@ -46,9 +46,9 @@ public class CacheFileSteaming : IDisposable
 
         var readCountTotal = readCount;
         var bufferPosition = readCount;
-        pagePosition += _pageSize;
+        pagePosition += this._pageSize;
 
-        while ((page.Length == _pageSize) && (bufferPosition < buffer.Length))
+        while ((page.Length == this._pageSize) && (bufferPosition < buffer.Length))
         {
             page = this.GetPage(pagePosition);
             if (page.Length == 0) return (int)readCountTotal;
@@ -59,7 +59,7 @@ public class CacheFileSteaming : IDisposable
 
             readCountTotal += readCount;
             bufferPosition += readCount;
-            pagePosition += _pageSize;
+            pagePosition += this._pageSize;
         }
 
         return (int)readCountTotal;
@@ -70,36 +70,33 @@ public class CacheFileSteaming : IDisposable
     /// </summary>
     public void WriteThroughCache(long position, byte[] buffer)
     {
-        lock (this._cache)
+        if (buffer.Length == 0) return;
+        var pagePosition = (position / this._pageSize) * this._pageSize;
+        var page = this.GetPage(pagePosition);
+
+        var pageOffset = position - pagePosition;
+        var writeCount = Math.Min(buffer.Length, page.Data.Length - pageOffset);
+
+        Array.Copy(buffer, 0, page.Data, pageOffset, writeCount);
+
+        page.Length = (int)Math.Max(pageOffset + writeCount, page.Length);
+        page.Changed = true;
+
+        pagePosition += this._pageSize;
+        var bufferPosition = writeCount;
+
+        while (bufferPosition < buffer.Length)
         {
-            if (buffer.Length == 0) return;
-            var pagePosition = (position / _pageSize) * _pageSize;
-            var page = this.GetPage(pagePosition);
+            page = this.GetPage(pagePosition);
+            writeCount = Math.Min(page.Data.Length, buffer.Length - bufferPosition);
 
-            var pageOffset = position - pagePosition;
-            var writeCount = Math.Min(buffer.Length, page.Data.Length - pageOffset);
+            Array.Copy(buffer, bufferPosition, page.Data, 0, writeCount);
 
-            Array.Copy(buffer, 0, page.Data, pageOffset, writeCount);
-
-            page.Length = (int)Math.Max(pageOffset + writeCount, page.Length);
+            page.Length = (int)Math.Max(writeCount, page.Length);
             page.Changed = true;
 
-            pagePosition += _pageSize;
-            var bufferPosition = writeCount;
-
-            while (bufferPosition < buffer.Length)
-            {
-                page = this.GetPage(pagePosition);
-                writeCount = Math.Min(page.Data.Length, buffer.Length - bufferPosition);
-
-                Array.Copy(buffer, bufferPosition, page.Data, 0, writeCount);
-
-                page.Length = (int)Math.Max(writeCount, page.Length);
-                page.Changed = true;
-
-                pagePosition += _pageSize;
-                bufferPosition += writeCount;
-            }
+            pagePosition += this._pageSize;
+            bufferPosition += writeCount;
         }
     }
 
@@ -121,7 +118,7 @@ public class CacheFileSteaming : IDisposable
                 return node.Value;
             }
 
-            if (this._cache.Count == _pagesCount)
+            if (this._cache.Count == this._pagesCount)
             {
                 node = this._cache.First;
                 var pageToUpdate = node.Value;
@@ -146,7 +143,7 @@ public class CacheFileSteaming : IDisposable
             {
                 Position = position,
                 Changed = false,
-                Data = new byte[_pageSize]
+                Data = new byte[this._pageSize]
             };
 
             ReadPage(page);
@@ -171,7 +168,7 @@ public class CacheFileSteaming : IDisposable
 
     public void Dispose()
     {
-        if (this._isDisposed) return;
+        if (Interlocked.Exchange(ref this._isDisposed, 1) == 1) return;
 
         lock (this._cache)
             foreach (var page in this._cache)
@@ -179,7 +176,5 @@ public class CacheFileSteaming : IDisposable
                     WritePage(page);
 
         this._stream.Dispose();
-
-        this._isDisposed = true;
     }
 }

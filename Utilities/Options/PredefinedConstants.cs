@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace LongFileSort.Utilities.Options;
+﻿namespace LongFileSort.Utilities.Options;
 
 internal static class PredefinedConstants
 {
@@ -26,13 +24,9 @@ internal static class PredefinedConstants
 
     public static readonly int DefaultFileStreamBufferSize = 4096;
 
-    public static readonly int FileStreamBufferPageSize = 16384;
+    public static readonly int FileSizeCheckDeviationPercentage = 5;
 
-    public static readonly int FileStreamBufferPagesCount = Environment.ProcessorCount * 4;
+    public static readonly int DefaultFileCachePagesCount = 4;
 
-    public static readonly int FileStreamReadonlyBufferPagesCount = 4;
-
-    public static readonly int MaximumDegreeOfParallelism = Environment.ProcessorCount;
-
-    public static readonly byte FileSizeCheckDeviationPercentage = 5;
+    public static readonly int DefaultFileCachePageSize = 16384;
 }
