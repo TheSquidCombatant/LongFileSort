@@ -61,11 +61,13 @@ Executable file project that creates a file with sorted data based on a file wit
   "ProcessingTemporaryFolder": "temp"
 }
 ```
-To pass the configuration for execution, you need to put the configuration file named appsettings.json in the folder with the executable file.
-Use the EnableParallelExecution option to enable/disable the use of all processor cores when sorting. When sorting entries shorter than 1 KB on average (approximately one thousand characters in UTF-8 encoding), it is better to use the False value. For longer strings, the True value.
-Use the CacheSizeLimitMegabytes option to limit the peak memory consumption for the file cache during sorting. Increasing the cache reduces the number of reads from the disk. At the same time, it is worth scaling the cache size depending on the number of lines in the file being sorted, and not depending on the total size of the original file. Setting a value less than 20 MB does not make much sense, because a comparable amount of memory at program startup will be occupied by the thread pool infrastructure by default.
-You can also pass the path to the configuration file as the first parameter at startup. Preset configuration files for Sorter are located in
-the [`Presets\Sorter`](https://github.com/TheSquidCombatant/LongFileSort/tree/main/Presets/Sorter) directory.
+To pass the configuration for execution, you need to put the configuration file named `appsettings.json` in the folder with the executable file.
+
+Use the `EnableParallelExecution` option to enable/disable the use of all processor cores when sorting. When sorting entries shorter than `1 KB` on average (approximately one thousand characters in UTF-8 encoding), it is better to use the `False` value. For longer strings, the `True` value.
+
+Use the `CacheSizeLimitMegabytes` option to limit the peak memory consumption for the file cache during sorting. Increasing the cache reduces the number of reads from the disk. At the same time, it is worth scaling the cache size depending on the number of lines in the file being sorted, and not depending on the total size of the original file. Setting a value less than `20 MB` does not make much sense, because a comparable amount of memory at program startup will be occupied by the thread pool infrastructure by default.
+
+You can also pass the path to the configuration file as the first parameter at startup. Preset configuration files for Sorter are located in the [`Presets\Sorter`](https://github.com/TheSquidCombatant/LongFileSort/tree/main/Presets/Sorter) directory.
 ## Sorter.Checker
 Executable file project that checks generated result files with sorted data. To run, you need a configuration file the same as for the Creator project.
 ## Utilities
