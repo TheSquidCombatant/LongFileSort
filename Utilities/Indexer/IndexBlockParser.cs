@@ -11,7 +11,16 @@ namespace LongFileSort.Utilities.Indexer;
 /// </summary>
 public static class IndexBlockParser
 {
-    public static void ConvertIndexToTargetFile(
+    /// <summary>
+    /// Convert index to file with data rows.
+    /// </summary>
+    /// <returns>
+    /// Count of items readed from index file.
+    /// </returns>
+    /// <exception cref="IOException">
+    /// Not enough bytes for read index block.
+    /// </exception>
+    public static long ConvertIndexToDataFile(
         string sourceFilePath,
         string indexFilePath,
         string targetFilePath,
@@ -45,17 +54,20 @@ public static class IndexBlockParser
         var partsDelimiterBytes = encoding.GetBytes(PredefinedConstants.SourcePartsDelimiter);
         var rowEndingBytes = encoding.GetBytes(PredefinedConstants.SourceRowEnding);
 
-        var indexBuffer = new byte[IndexBlock.Data.BlockSizeBytes];
-
         if (expectedPreamble.SequenceEqual(actualPreamble) && !append)
             targetFileStream.Write(actualPreamble);
+
+        var indexBuffer = new byte[IndexBlock.Data.BlockSizeBytes];
+        long resultRowsCount = 0;
 
         while (indexFileStream.Position < indexFileStream.Length)
         {
             var bytesRead = indexFileStream.Read(indexBuffer);
             const string exceptionMessage = "Not enough bytes for read index block.";
             if (bytesRead != IndexBlock.Data.BlockSizeBytes) throw new IOException(exceptionMessage);
+
             var block = new IndexBlock.Data(indexBuffer);
+            ++resultRowsCount;
 
             WriteIndexBlock(
                 block,
@@ -65,9 +77,20 @@ public static class IndexBlockParser
                 partsDelimiterBytes,
                 rowEndingBytes);
         }
+
+        return resultRowsCount;
     }
 
-    public static void ConvertSourceToIndexFile(
+    /// <summary>
+    /// Convert data to file with index blocks.
+    /// </summary>
+    /// <returns>
+    /// Count of items readed from source file.
+    /// </returns>
+    /// <exception cref="FileLoadException">
+    /// Looks like the source file is empty.
+    /// </exception>
+    public static long ConvertDataToIndexFile(
         string sourceFilePath,
         string indexFilePath,
         Encoding encoding,
@@ -106,9 +129,12 @@ public static class IndexBlockParser
         var exceptionMessage = $"Looks like the source file {sourceFilePath} is empty.";
         if (fileIndexBlock == null) throw new FileLoadException(exceptionMessage);
 
+        long resultRowsCount = 0;
+
         while (fileIndexBlock != null)
         {
             indexFileStream.Write(fileIndexBlock.ToByteArray());
+            ++resultRowsCount;
 
             fileIndexBlock = ReadIndexBlock(
                 sourceStreamReader,
@@ -119,6 +145,7 @@ public static class IndexBlockParser
         }
 
         indexFileStream.Flush(true);
+        return resultRowsCount;
     }
 
     private static IndexBlock.Data ReadIndexBlock(

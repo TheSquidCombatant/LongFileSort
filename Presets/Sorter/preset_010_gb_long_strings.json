@@ -1,8 +1,7 @@
 {
-  "CacheSizeLimitMegabytes": 20,
-  "EnableParallelExecution": true,
-  "SourceFilePath": "source_010_gb_long_strings.txt",
+  "CacheSizeLimitMegabytes": 2,
   "SourceEncodingName": "UTF-8",
-  "TargetFilePath": "target_010_gb_long_strings.txt",
-  "ProcessingTemporaryFolder": "temp"
+  "SourceFilePath": "source_010_gb_long_strings.txt",
+  "ProcessingTemporaryFolder": "temp",
+  "TargetFilePath": "target_010_gb_long_strings.txt"
 }

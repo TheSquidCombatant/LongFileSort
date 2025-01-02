@@ -29,4 +29,6 @@ internal static class PredefinedConstants
     public static readonly int DefaultFileCachePagesCount = 4;
 
     public static readonly int DefaultFileCachePageSize = 16384;
+
+    public static readonly int ParallelThresholdRowLengthBytes = 1024;
 }

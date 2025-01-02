@@ -41,27 +41,42 @@ public static class SorterHelper
 
     private static void GenerateSortedFile(SorterOptions options)
     {
+        var indexFilePath = Path.Combine(options.ProcessingTemporaryFolder, $"index_{Guid.NewGuid()}.txt");
+        var encoding = Encoding.GetEncoding(options.SourceEncodingName);
+
+        var rowsTotalCount = IndexBlockParser.ConvertDataToIndexFile(
+            options.SourceFilePath,
+            indexFilePath,
+            encoding,
+            append: false);
+
+        var rowsTotalLength = new FileInfo(options.SourceFilePath).Length;
+        var rowsAverageLength = rowsTotalLength / rowsTotalCount;
+        var enableParallelExecution = PredefinedConstants.ParallelThresholdRowLengthBytes < rowsAverageLength;
+
         var indexerOptions = new IndexerOptions()
         {
             CacheSizeLimitMegabytes = options.CacheSizeLimitMegabytes,
-            EnableParallelExecution = options.EnableParallelExecution,
+            EnableParallelExecution = enableParallelExecution,
             SourceFilePath = options.SourceFilePath,
-            SourceEncoding = Encoding.GetEncoding(options.SourceEncodingName),
-            IndexFilePath = Path.Combine(options.ProcessingTemporaryFolder, $"index_{Guid.NewGuid()}.txt")
+            SourceEncoding = encoding,
+            IndexFilePath = indexFilePath
         };
 
-        using var longFileIndex = new LongFileIndex(indexerOptions, true, false);
+        using var longFileIndex = new LongFileIndex(indexerOptions, false, false);
         var comparer = new IndexBlockComparer();
-        if (options.EnableParallelExecution) longFileIndex.SortParallel(0, longFileIndex.LongCount(), comparer);
+        if (enableParallelExecution) longFileIndex.SortParallel(0, longFileIndex.LongCount(), comparer);
         else (longFileIndex as ILargeList<IndexBlock>).Sort(0, longFileIndex.LongCount(), comparer);
         longFileIndex.Dispose();
 
-        IndexBlockParser.ConvertIndexToTargetFile(
+        var rowsResultCount = IndexBlockParser.ConvertIndexToDataFile(
             options.SourceFilePath,
             indexerOptions.IndexFilePath,
             options.TargetFilePath,
             indexerOptions.SourceEncoding);
 
         File.Delete(indexerOptions.IndexFilePath);
+        const string mismatchMessage = "The number of rows before and after sorting does not match.";
+        if (rowsTotalCount != rowsResultCount) throw new Exception(mismatchMessage);
     }
 }

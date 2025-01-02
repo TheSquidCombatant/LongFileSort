@@ -1,8 +1,7 @@
 {
   "CacheSizeLimitMegabytes": 20,
-  "EnableParallelExecution": true,
-  "SourceFilePath": "source_001_gb_short_strings.txt",
   "SourceEncodingName": "UTF-8",
-  "TargetFilePath": "target_001_gb_short_strings.txt",
-  "ProcessingTemporaryFolder": "temp"
+  "SourceFilePath": "source_001_gb_short_strings.txt",
+  "ProcessingTemporaryFolder": "temp",
+  "TargetFilePath": "target_001_gb_short_strings.txt"
 }

@@ -18,9 +18,9 @@ public static class SorterCheckerHelper
         SorterCheckerHelper.ValidateSotringOptions(options);
         SorterCheckerHelper.CheckEncodingBom(options);
         SorterCheckerHelper.CheckRowsCount(options, out var source, out var target);
-        SorterCheckerHelper.CheckRowsOrder(options, target);
-        SorterCheckerHelper.CheckRowsAvailability(options, source, target);
-        SorterCheckerHelper.CheckRowsOccurrences(options, source, target);
+        SorterCheckerHelper.CheckRowsOrder(target);
+        SorterCheckerHelper.CheckRowsAvailability(source, target);
+        SorterCheckerHelper.CheckRowsOccurrences(source, target);
     }
 
     private static void ValidateSotringOptions(SorterOptions options)
@@ -65,7 +65,7 @@ public static class SorterCheckerHelper
         var targetOptions = new IndexerOptions()
         {
             CacheSizeLimitMegabytes = options.CacheSizeLimitMegabytes,
-            EnableParallelExecution = options.EnableParallelExecution,
+            EnableParallelExecution = false,
             SourceFilePath = options.TargetFilePath,
             SourceEncoding = Encoding.GetEncoding(options.SourceEncodingName),
             IndexFilePath = Path.Combine(options.ProcessingTemporaryFolder, $"index_{Guid.NewGuid()}.txt")
@@ -76,7 +76,7 @@ public static class SorterCheckerHelper
         var sourceOptions = new IndexerOptions()
         {
             CacheSizeLimitMegabytes = options.CacheSizeLimitMegabytes,
-            EnableParallelExecution = options.EnableParallelExecution,
+            EnableParallelExecution = false,
             SourceFilePath = options.SourceFilePath,
             SourceEncoding = Encoding.GetEncoding(options.SourceEncodingName),
             IndexFilePath = Path.Combine(options.ProcessingTemporaryFolder, $"index_{Guid.NewGuid()}.txt")
@@ -89,7 +89,7 @@ public static class SorterCheckerHelper
         Console.WriteLine("Rows count is OK.");
     }
 
-    private static void CheckRowsOrder(SorterOptions options, LongFileIndex target)
+    private static void CheckRowsOrder(LongFileIndex target)
     {
         var violationIndex = target.IsSorted(0, target.LongCount(), new IndexBlockComparer());
         const string exceptionMessage = "Looks like target file was not sorted properly at row {0}.";
@@ -97,7 +97,7 @@ public static class SorterCheckerHelper
         Console.WriteLine("Rows order is OK.");
     }
 
-    private static void CheckRowsAvailability(SorterOptions options, LongFileIndex source, LongFileIndex target)
+    private static void CheckRowsAvailability(LongFileIndex source, LongFileIndex target)
     {
         var comparer = new IndexBlockComparer();
 
@@ -115,11 +115,10 @@ public static class SorterCheckerHelper
         Console.WriteLine("Rows availability is OK.");
     }
 
-    private static void CheckRowsOccurrences(SorterOptions options, LongFileIndex source, LongFileIndex target)
+    private static void CheckRowsOccurrences(LongFileIndex source, LongFileIndex target)
     {
         var comparer = new IndexBlockComparer();
-        if (options.EnableParallelExecution) source.SortParallel(0, source.LongCount(), comparer);
-        else (source as ILargeList<IndexBlock>).Sort(0, source.LongCount(), comparer);
+        (source as ILargeList<IndexBlock>).Sort(0, source.LongCount(), comparer);
 
         var sourceIndex = 0;
         var targetIndex = 0;

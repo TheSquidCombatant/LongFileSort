@@ -144,7 +144,7 @@ public class LongFileIndex : ILargeList<IndexBlock>, IListHints, IDisposable
 
     private void InitIndexFiles(bool rebuild)
     {
-        if (rebuild) IndexBlockParser.ConvertSourceToIndexFile(
+        if (rebuild) IndexBlockParser.ConvertDataToIndexFile(
             this.IndexerOptions.SourceFilePath,
             this.IndexerOptions.IndexFilePath,
             this.IndexerOptions.SourceEncoding);
