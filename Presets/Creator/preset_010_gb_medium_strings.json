@@ -1,13 +1,13 @@
 {
-  "SourceFilePath": "source_010_gb_short_strings.txt",
+  "SourceFilePath": "source_010_gb_medium_strings.txt",
   "SourceEncodingName": "UTF-8",
   "SourceSizeBytes": 10737418240,
   "SourceOutputWithBom": false,
   "ProcessingTemporaryFolder": "temp",
   "NumberPartDigits": "0123456789",
-  "NumberPartLength": 10,
-  "NumberPartLengthVariation": 5,
+  "NumberPartLength": 9,
+  "NumberPartLengthVariation": 0,
   "StringPartSymbols": " abcdefghijklmnopqrstuvwxyz",
-  "StringPartLength": 10,
-  "StringPartLengthVariation": 5
+  "StringPartLength": 1024,
+  "StringPartLengthVariation": 0
 }

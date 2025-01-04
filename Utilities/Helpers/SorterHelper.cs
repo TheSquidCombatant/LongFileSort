@@ -64,9 +64,9 @@ public static class SorterHelper
         };
 
         using var longFileIndex = new LongFileIndex(indexerOptions, false, false);
-        var comparer = new IndexBlockComparer();
+        var comparer = new IndexBlockComparer(longFileIndex);
         if (enableParallelExecution) longFileIndex.SortParallel(0, longFileIndex.LongCount(), comparer);
-        else (longFileIndex as ILargeList<IndexBlock>).Sort(0, longFileIndex.LongCount(), comparer);
+        else (longFileIndex as ILargeList<IndexBlockData>).Sort(0, longFileIndex.LongCount(), comparer);
         longFileIndex.Dispose();
 
         var rowsResultCount = IndexBlockParser.ConvertIndexToDataFile(

@@ -34,48 +34,54 @@ Executable file project that generates files with unsorted data. To run, you nee
 configuration file of the following type:
 ```json
 {
-  "SourceFilePath": "source_001_gb_test_strings.txt",
+  "SourceFilePath": "source_001_gb_medium_strings.txt",
   "SourceEncodingName": "UTF-8",
-  "SourceSizeBytes": 104857600,
+  "SourceSizeBytes": 1073741824,
   "SourceOutputWithBom": false,
   "ProcessingTemporaryFolder": "temp",
   "NumberPartDigits": "0123456789",
-  "NumberPartLength": 10,
-  "NumberPartLengthVariation": 5,
+  "NumberPartLength": 9,
+  "NumberPartLengthVariation": 0,
   "StringPartSymbols": " abcdefghijklmnopqrstuvwxyz",
-  "StringPartLength": 10,
-  "StringPartLengthVariation": 5
+  "StringPartLength": 1024,
+  "StringPartLengthVariation": 0
 }
 ```
 To pass the configuration for execution, you need to put the configuration file named
 `appsettings.json` in the folder with the executable file.
 
-`SourceFilePath` - specifies the fully qualified name of the file in the operating system into
-which the generated content will be writtend.
+`SourceFilePath` - specifies the name of the file (fully qualified or relative to startup folder)
+into which the generated content will be writtend.
 
-`SourceEncodingName` - encoding used to write the output file correctly.
+`SourceEncodingName` - encoding used to write the output file correctly. For example: UTF-8,
+UTF-16, UTF-32 and so on.
 
-`SourceSizeBytes` - size of the file that should be generated.
+`SourceSizeBytes` - size of the file that should be generated, counting in bytes. The size cannot
+be negative. If you specify a small size, it will be rounded up to the minimum row size.
 
-`SourceOutputWithBom` - optional Unicode special character code whose appearance as a magic number
-at the start of a text stream.
+`SourceOutputWithBom` - creates optional unicode special character code whose appearance as a magic
+number at the start of a text stream.
 
-`ProcessingTemporaryFolder` - specifies the full name of the directory in the operating system
-that will be used to store possible temporary files.
+`ProcessingTemporaryFolder` - specifies the name of the directory that will be used to store
+possible temporary files. If the specified directory does not exist, it will be created.
 
 `NumberPartDigits` - a set of digits that will be used to generate the numeric part of the row.
+Cannot be an empty set. Cannot contain digits from the stop-digits set.
 
-`NumberPartLength` - target length of the numeric part of the row.
+`NumberPartLength` - target length of the numeric part of the row. Cannot be less than one. Must be
+greater than maximum size of the random deviation of the numeric part.
 
 `NumberPartLengthVariation` - the maximum size of the random deviation of the length of the numeric
-part of the row.
+part of the row. Cannot be negative. Must be less than target length of the numeric part.
 
 `StringPartSymbols` - a set of symbols that will be used to generate the string part of the row.
+Cannot be an empty set. Cannot contain symbols from the stop-symbols set.
 
-`StringPartLength` - target length of the string part of the row.
+`StringPartLength` - target length of the string part of the row. Cannot be less than one. Must be
+greater than maximum size of the random deviation of the string part.
 
 `StringPartLengthVariation` -  the maximum size of the random deviation of the length of the string
-part of the row.
+part of the row. Cannot be negative. Must be less than target length of the string part.
 
 You can also pass the path to the configuration file as the first parameter at startup. Preset
 configuration files for Creator are located in the
@@ -89,12 +95,12 @@ Executable file project that creates a file with sorted data based on a file wit
 run, you need to provide a configuration file of the following type:
 ```json
 {
-  "CacheSizeLimitMegabytes": 200,
+  "CacheSizeLimitMegabytes": 16,
   "SourceEncodingName": "UTF-8",
-  "SourceFilePath": "source_001_gb_test_strings.txt",
+  "SourceFilePath": "source_001_gb_medium_strings.txt",
   "ProcessingTemporaryFolder": "temp",
-  "TargetFilePath": "target_001_gb_test_strings.txt"
-}
+  "TargetFilePath": "target_001_gb_medium_strings.txt"
+} 
 ```
 To pass the configuration for execution, you need to put the configuration file named
 `appsettings.json` in the folder with the executable file.
@@ -102,19 +108,19 @@ To pass the configuration for execution, you need to put the configuration file 
 `CacheSizeLimitMegabytes` - limits the peak memory consumption for the file cache during sorting.
 Increas this value to reduces the number of reads from the disk. It is worth scaling the cache size
 depending on the number of lines in the file being sorted, and not depending on the total size of
-the original file. Setting a value less than `20 MB` does not make much sense, because a comparable
-amount of memory at program startup will be occupied by the thread pool infrastructure by default.
+the original file.
 
-`SourceEncodingName` - encoding used to read the input file correctly.
+`SourceEncodingName` - encoding used to read the input file correctly. For example: UTF-8,
+UTF-16, UTF-32 and so on.
 
-`SourceFilePath` - specifies the fully qualified name of the file in the operating system whose
-contents are to be sorted.
+`SourceFilePath` - specifies the name of the file (fully qualified or relative to startup folder)
+in whose contents are to be sorted.
 
-`ProcessingTemporaryFolder` - specifies the full name of the directory in the operating system
-that will be used to store possible temporary files.
+`ProcessingTemporaryFolder` - specifies the name of the directory that will be used to store
+possible temporary files. If the specified directory does not exist, it will be created.
 
-`TargetFilePath` - specifies the fully qualified name of the file in the operating system into
-which the sorted content will be saved.
+`TargetFilePath` - specifies the name of the file (fully qualified or relative to startup folder)
+into which the sorted content will be saved.
 
 You can also pass the path to the configuration file as the first parameter at startup. Preset
 configuration files for Sorter are located in the
@@ -127,4 +133,4 @@ configuration file the same as for the Creator project.
 Library project that implements all logic.
 ## Presets
 Predefined load profile
-[configurations](https://github.com/TheSquidCombatant/LongFileSort/tree/main/Presets).
+[`configurations`](https://github.com/TheSquidCombatant/LongFileSort/tree/main/Presets).

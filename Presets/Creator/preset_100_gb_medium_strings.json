@@ -1,13 +1,13 @@
 {
-  "SourceFilePath": "source_010_gb_long_strings.txt",
+  "SourceFilePath": "source_100_gb_medium_strings.txt",
   "SourceEncodingName": "UTF-8",
-  "SourceSizeBytes": 10737418240,
+  "SourceSizeBytes": 107374182400,
   "SourceOutputWithBom": false,
   "ProcessingTemporaryFolder": "temp",
   "NumberPartDigits": "0123456789",
-  "NumberPartLength": 3000,
+  "NumberPartLength": 9,
   "NumberPartLengthVariation": 0,
   "StringPartSymbols": " abcdefghijklmnopqrstuvwxyz",
-  "StringPartLength": 1073741824,
+  "StringPartLength": 1024,
   "StringPartLengthVariation": 0
 }

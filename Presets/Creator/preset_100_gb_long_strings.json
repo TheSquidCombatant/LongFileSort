@@ -8,6 +8,6 @@
   "NumberPartLength": 30000,
   "NumberPartLengthVariation": 0,
   "StringPartSymbols": " abcdefghijklmnopqrstuvwxyz",
-  "StringPartLength": 2684354560,
+  "StringPartLength": 10737418240,
   "StringPartLengthVariation": 0
 }

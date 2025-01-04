@@ -41,6 +41,9 @@ public static class CreatorHelper
         if (PredefinedConstants.NumberPartStopSymbols.Any(options.NumberPartDigits.Contains))
             throw new ArgumentOutOfRangeException(nameof(options.NumberPartDigits));
 
+        if (options.NumberPartDigits.All(PredefinedConstants.NumberPartForbiddenFirstSymbols.Contains))
+            throw new ArgumentOutOfRangeException(nameof(options.NumberPartDigits));
+
         if (options.NumberPartLength < 1)
             throw new ArgumentOutOfRangeException(nameof(options.NumberPartLength));
 
@@ -51,6 +54,9 @@ public static class CreatorHelper
             throw new ArgumentOutOfRangeException(nameof(options.StringPartSymbols));
 
         if (PredefinedConstants.StringPartStopSymbols.Any(options.StringPartSymbols.Contains))
+            throw new ArgumentOutOfRangeException(nameof(options.StringPartSymbols));
+
+        if (options.StringPartSymbols.All(PredefinedConstants.StringPartForbiddenFirstSymbols.Contains))
             throw new ArgumentOutOfRangeException(nameof(options.StringPartSymbols));
 
         if (options.StringPartLength < 1)

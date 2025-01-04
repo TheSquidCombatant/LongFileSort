@@ -23,20 +23,26 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Creator", "Creator", "{E255E340-0606-4CFA-8163-236BF782EB77}"
 	ProjectSection(SolutionItems) = preProject
 		Presets\Creator\preset_001_gb_long_strings.json = Presets\Creator\preset_001_gb_long_strings.json
+		Presets\Creator\preset_001_gb_medium_strings.json = Presets\Creator\preset_001_gb_medium_strings.json
 		Presets\Creator\preset_001_gb_short_strings.json = Presets\Creator\preset_001_gb_short_strings.json
 		Presets\Creator\preset_010_gb_long_strings.json = Presets\Creator\preset_010_gb_long_strings.json
+		Presets\Creator\preset_010_gb_medium_strings.json = Presets\Creator\preset_010_gb_medium_strings.json
 		Presets\Creator\preset_010_gb_short_strings.json = Presets\Creator\preset_010_gb_short_strings.json
 		Presets\Creator\preset_100_gb_long_strings.json = Presets\Creator\preset_100_gb_long_strings.json
+		Presets\Creator\preset_100_gb_medium_strings.json = Presets\Creator\preset_100_gb_medium_strings.json
 		Presets\Creator\preset_100_gb_short_strings.json = Presets\Creator\preset_100_gb_short_strings.json
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Sorter", "Sorter", "{07F40D4C-8BD9-4D9A-9638-7240C33AB9F5}"
 	ProjectSection(SolutionItems) = preProject
 		Presets\Sorter\preset_001_gb_long_strings.json = Presets\Sorter\preset_001_gb_long_strings.json
+		Presets\Sorter\preset_001_gb_medium_strings.json = Presets\Sorter\preset_001_gb_medium_strings.json
 		Presets\Sorter\preset_001_gb_short_strings.json = Presets\Sorter\preset_001_gb_short_strings.json
 		Presets\Sorter\preset_010_gb_long_strings.json = Presets\Sorter\preset_010_gb_long_strings.json
+		Presets\Sorter\preset_010_gb_medium_strings.json = Presets\Sorter\preset_010_gb_medium_strings.json
 		Presets\Sorter\preset_010_gb_short_strings.json = Presets\Sorter\preset_010_gb_short_strings.json
 		Presets\Sorter\preset_100_gb_long_strings.json = Presets\Sorter\preset_100_gb_long_strings.json
+		Presets\Sorter\preset_100_gb_medium_strings.json = Presets\Sorter\preset_100_gb_medium_strings.json
 		Presets\Sorter\preset_100_gb_short_strings.json = Presets\Sorter\preset_100_gb_short_strings.json
 	EndProjectSection
 EndProject

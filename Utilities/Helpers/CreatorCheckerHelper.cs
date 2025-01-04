@@ -19,7 +19,7 @@ public static class CreatorCheckerHelper
         CreatorCheckerHelper.CheckFileSize(options);
         CreatorCheckerHelper.CheckEncodingBom(options);
         CreatorCheckerHelper.CheckRowsPattern(options, out var index);
-        CreatorCheckerHelper.CheckStringsDuplication(options, index);
+        CreatorCheckerHelper.CheckStringsDuplication(index);
     }
 
     private static void ValidateCreatingOptions(CreatorOptions options)
@@ -38,30 +38,6 @@ public static class CreatorCheckerHelper
 
         if (options.SourceSizeBytes < 1)
             throw new ArgumentOutOfRangeException(nameof(options.SourceSizeBytes));
-
-        if (string.IsNullOrEmpty(options.NumberPartDigits))
-            throw new ArgumentOutOfRangeException(nameof(options.NumberPartDigits));
-
-        if (PredefinedConstants.NumberPartStopSymbols.Any(options.NumberPartDigits.Contains))
-            throw new ArgumentOutOfRangeException(nameof(options.NumberPartDigits));
-
-        if (options.NumberPartLength < 1)
-            throw new ArgumentOutOfRangeException(nameof(options.NumberPartLength));
-
-        if ((options.NumberPartLengthVariation < 0) || (options.NumberPartLength <= options.NumberPartLengthVariation))
-            throw new ArgumentOutOfRangeException(nameof(options.NumberPartLengthVariation));
-
-        if (string.IsNullOrEmpty(options.StringPartSymbols))
-            throw new ArgumentOutOfRangeException(nameof(options.StringPartSymbols));
-
-        if (PredefinedConstants.StringPartStopSymbols.Any(options.StringPartSymbols.Contains))
-            throw new ArgumentOutOfRangeException(nameof(options.StringPartSymbols));
-
-        if (options.StringPartLength < 1)
-            throw new ArgumentOutOfRangeException(nameof(options.StringPartLength));
-
-        if ((options.StringPartLengthVariation < 0) || (options.StringPartLength <= options.StringPartLengthVariation))
-            throw new ArgumentOutOfRangeException(nameof(options.StringPartLengthVariation));
     }
 
     private static void CheckFileSize(CreatorOptions options)
@@ -107,15 +83,15 @@ public static class CreatorCheckerHelper
         Console.WriteLine("Rows pattern is OK.");
     }
 
-    private static void CheckStringsDuplication(CreatorOptions options, LongFileIndex index)
+    private static void CheckStringsDuplication(LongFileIndex index)
     {
         using var longFileIndex = index;
-        var comparer = new IndexBlockComparer();
-        (longFileIndex as ILargeList<IndexBlock>).Sort(0, longFileIndex.LongCount(), comparer);
+        var comparer = new IndexBlockComparer(longFileIndex);
+        (longFileIndex as ILargeList<IndexBlockData>).Sort(0, longFileIndex.LongCount(), comparer);
 
         for (long i = 0; i < longFileIndex.LongCount() - 1; ++i)
         {
-            if (IndexBlockComparer.StringPartCoparison(longFileIndex[i], longFileIndex[i + 1]) == 0)
+            if (comparer.StringPartCoparison(longFileIndex[i], longFileIndex[i + 1]) == 0)
             {
                 Console.WriteLine("Strings duplication is OK.");
                 return;

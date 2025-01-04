@@ -1,0 +1,7 @@
+{
+  "CacheSizeLimitMegabytes": 16,
+  "SourceEncodingName": "UTF-8",
+  "SourceFilePath": "source_100_gb_medium_strings.txt",
+  "ProcessingTemporaryFolder": "temp",
+  "TargetFilePath": "target_100_gb_medium_strings.txt"
+}

@@ -5,9 +5,9 @@
   "SourceOutputWithBom": false,
   "ProcessingTemporaryFolder": "temp",
   "NumberPartDigits": "0123456789",
-  "NumberPartLength": 9,
-  "NumberPartLengthVariation": 0,
+  "NumberPartLength": 10,
+  "NumberPartLengthVariation": 5,
   "StringPartSymbols": " abcdefghijklmnopqrstuvwxyz",
-  "StringPartLength": 1024,
-  "StringPartLengthVariation": 0
+  "StringPartLength": 10,
+  "StringPartLengthVariation": 5
 }

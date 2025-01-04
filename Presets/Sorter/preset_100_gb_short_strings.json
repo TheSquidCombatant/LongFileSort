@@ -1,5 +1,5 @@
 {
-  "CacheSizeLimitMegabytes": 20,
+  "CacheSizeLimitMegabytes": 64,
   "SourceEncodingName": "UTF-8",
   "SourceFilePath": "source_100_gb_short_strings.txt",
   "ProcessingTemporaryFolder": "temp",

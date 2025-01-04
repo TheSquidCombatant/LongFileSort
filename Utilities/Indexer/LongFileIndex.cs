@@ -11,7 +11,7 @@ namespace LongFileSort.Utilities.Indexer;
 /// <summary>
 /// Core of large file processing mechanism.
 /// </summary>
-public class LongFileIndex : ILargeList<IndexBlock>, IListHints, IDisposable
+public class LongFileIndex : ILargeList<IndexBlockData>, IListHints, IDisposable
 {
     private Dictionary<string, object> _listHints = new();
 
@@ -39,7 +39,7 @@ public class LongFileIndex : ILargeList<IndexBlock>, IListHints, IDisposable
     /// <summary>
     /// Suitable for parallel getting or setting the file index block.
     /// </summary>
-    public IndexBlock this[long index]
+    public IndexBlockData this[long index]
     {
         get => GetIndexBlock(index);
         set => SetIndexBlock(index, value);
@@ -59,10 +59,10 @@ public class LongFileIndex : ILargeList<IndexBlock>, IListHints, IDisposable
     /// <summary>
     /// Suitable for parallel setting the file index block.
     /// </summary>
-    private void SetIndexBlock(long index, IndexBlock indexBlock)
+    private void SetIndexBlock(long index, IndexBlockData indexBlockData)
     {
-        var position = index * IndexBlock.Data.BlockSizeBytes;
-        var buffer = indexBlock.IndexBlockData.ToByteArray();
+        var position = index * IndexBlockData.BlockSizeBytes;
+        var buffer = indexBlockData.ToByteArray();
         this.IndexFileCache.WriteThroughCache(position, buffer);
         if (this._longCount < ++index) this._longCount = index;
     }
@@ -70,15 +70,14 @@ public class LongFileIndex : ILargeList<IndexBlock>, IListHints, IDisposable
     /// <summary>
     /// Suitable for parallel getting the file index block.
     /// </summary>
-    private IndexBlock GetIndexBlock(long index)
+    private IndexBlockData GetIndexBlock(long index)
     {
-        var buffer = new byte[IndexBlock.Data.BlockSizeBytes];
-        var position = index * IndexBlock.Data.BlockSizeBytes;
+        var buffer = new byte[IndexBlockData.BlockSizeBytes];
+        var position = index * IndexBlockData.BlockSizeBytes;
         var count = this.IndexFileCache.ReadThroughCache(position, buffer);
         const string message = "Index file to short to read this index block.";
-        if (count < IndexBlock.Data.BlockSizeBytes) throw new IOException(message);
-        var data = new IndexBlock.Data(buffer);
-        return new IndexBlock(data, this);
+        if (count < IndexBlockData.BlockSizeBytes) throw new IOException(message);
+        return new IndexBlockData(buffer);
     }
 
     private void FlushIndex()
@@ -102,7 +101,7 @@ public class LongFileIndex : ILargeList<IndexBlock>, IListHints, IDisposable
         var totalMemoryBytes = this.IndexerOptions.CacheSizeLimitMegabytes * 1024 * 1024;
         var isParallel = this.IndexerOptions.EnableParallelExecution;
         var momoryForListBufferingBytes = totalMemoryBytes / 2;
-        var bufferingListElements = momoryForListBufferingBytes / IndexBlock.Data.BlockSizeBytes;
+        var bufferingListElements = momoryForListBufferingBytes / IndexBlockData.BlockSizeBytes;
         if (isParallel) bufferingListElements /= Environment.ProcessorCount;
         const string thresholdHintName = "BufferingElementsLimit";
         this._listHints.Add(thresholdHintName, bufferingListElements);
@@ -112,24 +111,19 @@ public class LongFileIndex : ILargeList<IndexBlock>, IListHints, IDisposable
     {
         const int bytesInMegabyte = 1024 * 1024;
         const int totalMemoryParts = 4;
-        const int minPageSizeBytes = 1024;
         const int minPagesCount = 1;
 
         var totalMemoryBytes = this.IndexerOptions.CacheSizeLimitMegabytes * bytesInMegabyte;
         var isParallel = this.IndexerOptions.EnableParallelExecution;
         var momoryForOneFileFuffering = totalMemoryBytes / totalMemoryParts;
 
-        var pagesCountForEachThread = (double)PredefinedConstants.DefaultFileCachePagesCount;
         var pageSize = (double)PredefinedConstants.DefaultFileCachePageSize;
-        var momeryRatio = momoryForOneFileFuffering / (pagesCountForEachThread * pageSize);
+        var pagesCountForAllThreads = momoryForOneFileFuffering / pageSize;
+        if (pagesCountForAllThreads < minPagesCount) pagesCountForAllThreads = minPagesCount;
 
-        pagesCountForEachThread *= momeryRatio;
+        var pagesCountForEachThread = pagesCountForAllThreads;
+        if (isParallel) pagesCountForEachThread /= Environment.ProcessorCount;
         if (pagesCountForEachThread < minPagesCount) pagesCountForEachThread = minPagesCount;
-        var pagesCountForAllThreads = pagesCountForEachThread;
-
-        if (isParallel) pagesCountForAllThreads *= Environment.ProcessorCount;
-        if (isParallel) pageSize /= Environment.ProcessorCount;
-        if (pageSize < minPageSizeBytes) pageSize = minPageSizeBytes;
 
         this.IndexFileCache = new CacheFileSteaming(
             (int)pageSize,
@@ -151,6 +145,6 @@ public class LongFileIndex : ILargeList<IndexBlock>, IListHints, IDisposable
 
         if (!File.Exists(this.IndexerOptions.IndexFilePath)) return;
 
-        this._longCount = new FileInfo(this.IndexerOptions.IndexFilePath).Length / IndexBlock.Data.BlockSizeBytes;
+        this._longCount = new FileInfo(this.IndexerOptions.IndexFilePath).Length / IndexBlockData.BlockSizeBytes;
     }
 }

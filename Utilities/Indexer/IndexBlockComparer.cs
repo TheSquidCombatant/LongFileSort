@@ -2,16 +2,30 @@
 
 namespace LongFileSort.Utilities.Indexer;
 
-public class IndexBlockComparer : IComparer<IndexBlock>
+public class IndexBlockComparer : IComparer<IndexBlockData>
 {
-    public int Compare(IndexBlock x, IndexBlock y)
+    private readonly LongFileIndex _leftIndexer;
+
+    private readonly LongFileIndex _rightIndexer;
+
+    public IndexBlockComparer(LongFileIndex bothOperandsIndexer)
+        : this(bothOperandsIndexer, bothOperandsIndexer)
+    { }
+
+    public IndexBlockComparer(LongFileIndex firstOperandIndexer, LongFileIndex secondOperandIndexer)
+    {
+        this._leftIndexer = firstOperandIndexer;
+        this._rightIndexer = secondOperandIndexer;
+    }
+
+    public int Compare(IndexBlockData x, IndexBlockData y)
     {
         var stringPartCoparisonResult = StringPartCoparison(x, y);
         if (stringPartCoparisonResult != 0) return stringPartCoparisonResult;
         return NumberPartCoparison(x, y);
     }
 
-    public static int StringPartCoparison(IndexBlock x, IndexBlock y)
+    public int StringPartCoparison(IndexBlockData x, IndexBlockData y)
     {
         var stringCacheCoparisonResult = StringCacheCoparison(x, y);
         if (stringCacheCoparisonResult.HasValue) return stringCacheCoparisonResult.Value;
@@ -22,7 +36,7 @@ public class IndexBlockComparer : IComparer<IndexBlock>
         return 0;
     }
 
-    public static int NumberPartCoparison(IndexBlock x, IndexBlock y)
+    public int NumberPartCoparison(IndexBlockData x, IndexBlockData y)
     {
         var numberLengthComparison = NumberLengthComparison(x, y);
         if (numberLengthComparison.HasValue) return numberLengthComparison.Value;
@@ -33,41 +47,41 @@ public class IndexBlockComparer : IComparer<IndexBlock>
         return 0;
     }
 
-    private static int? StringCacheCoparison(IndexBlock x, IndexBlock y)
+    private int? StringCacheCoparison(IndexBlockData x, IndexBlockData y)
     {
-        for (int i = 0; i < IndexBlock.Data.CachedSymbolsCount; ++i)
+        for (int i = 0; i < IndexBlockData.CachedSymbolsCount; ++i)
         {
-            var result = x.IndexBlockData.CachedStringStart[i] - y.IndexBlockData.CachedStringStart[i];
+            var result = x.CachedStringStart[i] - y.CachedStringStart[i];
             if (result != 0) return result;
         }
 
-        if ((x.ParentIndexer.IndexerOptions.IndexFilePath == y.ParentIndexer.IndexerOptions.IndexFilePath)
-            && (x.IndexBlockData.StringStartPosition == y.IndexBlockData.StringStartPosition)
-                && (x.IndexBlockData.StringEndPosition == y.IndexBlockData.StringEndPosition))
+        if ((this._leftIndexer == this._rightIndexer)
+            && (x.StringStartPosition == y.StringStartPosition)
+                && (x.StringEndPosition == y.StringEndPosition))
             return 0;
 
-        var firstTotalLength = x.IndexBlockData.StringEndPosition - x.IndexBlockData.StringStartPosition;
-        var secondTotalLength = y.IndexBlockData.StringEndPosition - y.IndexBlockData.StringStartPosition;
+        var firstTotalLength = x.StringEndPosition - x.StringStartPosition;
+        var secondTotalLength = y.StringEndPosition - y.StringStartPosition;
 
-        if (firstTotalLength <= IndexBlock.Data.CachedSymbolsCount)
-            if (secondTotalLength <= IndexBlock.Data.CachedSymbolsCount)
+        if (firstTotalLength <= IndexBlockData.CachedSymbolsCount)
+            if (secondTotalLength <= IndexBlockData.CachedSymbolsCount)
                 return 0;
 
-        if (firstTotalLength == IndexBlock.Data.CachedSymbolsCount)
-            if (secondTotalLength > IndexBlock.Data.CachedSymbolsCount)
+        if (firstTotalLength == IndexBlockData.CachedSymbolsCount)
+            if (secondTotalLength > IndexBlockData.CachedSymbolsCount)
                 return -1;
 
-        if (secondTotalLength == IndexBlock.Data.CachedSymbolsCount)
-            if (firstTotalLength > IndexBlock.Data.CachedSymbolsCount)
+        if (secondTotalLength == IndexBlockData.CachedSymbolsCount)
+            if (firstTotalLength > IndexBlockData.CachedSymbolsCount)
                 return 1;
 
         return null;
     }
 
-    private static int? StringValueComparison(IndexBlock x, IndexBlock y)
+    private int? StringValueComparison(IndexBlockData x, IndexBlockData y)
     {
-        using var firstIndexReader = x.GetStringPartReader();
-        using var secondIndexReader = y.GetStringPartReader();
+        using var firstIndexReader = x.GetStringPartReader(this._leftIndexer);
+        using var secondIndexReader = y.GetStringPartReader(this._rightIndexer);
 
         while (!firstIndexReader.EndOfStream && !secondIndexReader.EndOfStream)
         {
@@ -83,22 +97,22 @@ public class IndexBlockComparer : IComparer<IndexBlock>
         return null;
     }
 
-    private static int? NumberLengthComparison(IndexBlock x, IndexBlock y)
+    private int? NumberLengthComparison(IndexBlockData x, IndexBlockData y)
     {
-        if ((x.ParentIndexer.IndexerOptions.IndexFilePath == y.ParentIndexer.IndexerOptions.IndexFilePath)
-            && (x.IndexBlockData.NumberStartPosition == y.IndexBlockData.NumberStartPosition)
-                && (x.IndexBlockData.NumberEndPosition == y.IndexBlockData.NumberEndPosition))
+        if ((this._leftIndexer == this._rightIndexer)
+            && (x.NumberStartPosition == y.NumberStartPosition)
+                && (x.NumberEndPosition == y.NumberEndPosition))
             return 0;
 
-        if ((x.IndexBlockData.NumberEndPosition != 0) && (y.IndexBlockData.NumberEndPosition == 0))
+        if ((x.NumberEndPosition != 0) && (y.NumberEndPosition == 0))
             return 1;
-        if ((x.IndexBlockData.NumberEndPosition == 0) && (y.IndexBlockData.NumberEndPosition != 0))
+        if ((x.NumberEndPosition == 0) && (y.NumberEndPosition != 0))
             return -1;
-        if ((x.IndexBlockData.NumberEndPosition == 0) && (y.IndexBlockData.NumberEndPosition == 0))
-            return x.IndexBlockData.NumberStartPosition.CompareTo(y.IndexBlockData.NumberStartPosition);
+        if ((x.NumberEndPosition == 0) && (y.NumberEndPosition == 0))
+            return x.NumberStartPosition.CompareTo(y.NumberStartPosition);
 
-        var firstTotalLength = x.IndexBlockData.NumberEndPosition - x.IndexBlockData.NumberStartPosition;
-        var secondTotalLength = y.IndexBlockData.NumberEndPosition - y.IndexBlockData.NumberStartPosition;
+        var firstTotalLength = x.NumberEndPosition - x.NumberStartPosition;
+        var secondTotalLength = y.NumberEndPosition - y.NumberStartPosition;
 
         if (firstTotalLength > secondTotalLength) return 1;
         if (firstTotalLength < secondTotalLength) return -1;
@@ -106,10 +120,10 @@ public class IndexBlockComparer : IComparer<IndexBlock>
         return null;
     }
 
-    private static int? NumberValueComparison(IndexBlock x, IndexBlock y)
+    private int? NumberValueComparison(IndexBlockData x, IndexBlockData y)
     {
-        using var firstIndexReader = x.GetNumberPartReader();
-        using var secondIndexReader = y.GetNumberPartReader();
+        using var firstIndexReader = x.GetNumberPartReader(this._leftIndexer);
+        using var secondIndexReader = y.GetNumberPartReader(this._rightIndexer);
 
         while (!firstIndexReader.EndOfStream && !secondIndexReader.EndOfStream)
         {

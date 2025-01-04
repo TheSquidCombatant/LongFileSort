@@ -57,16 +57,16 @@ public static class IndexBlockParser
         if (expectedPreamble.SequenceEqual(actualPreamble) && !append)
             targetFileStream.Write(actualPreamble);
 
-        var indexBuffer = new byte[IndexBlock.Data.BlockSizeBytes];
+        var indexBuffer = new byte[IndexBlockData.BlockSizeBytes];
         long resultRowsCount = 0;
 
         while (indexFileStream.Position < indexFileStream.Length)
         {
             var bytesRead = indexFileStream.Read(indexBuffer);
             const string exceptionMessage = "Not enough bytes for read index block.";
-            if (bytesRead != IndexBlock.Data.BlockSizeBytes) throw new IOException(exceptionMessage);
+            if (bytesRead != IndexBlockData.BlockSizeBytes) throw new IOException(exceptionMessage);
 
-            var block = new IndexBlock.Data(indexBuffer);
+            var block = new IndexBlockData(indexBuffer);
             ++resultRowsCount;
 
             WriteIndexBlock(
@@ -148,7 +148,7 @@ public static class IndexBlockParser
         return resultRowsCount;
     }
 
-    private static IndexBlock.Data ReadIndexBlock(
+    private static IndexBlockData ReadIndexBlock(
         StreamReader streamReader,
         ref long currentSymbolStreamPosition,
         Encoding encoding,
@@ -160,7 +160,7 @@ public static class IndexBlockParser
         long stringStartPosition = 0;
         long stringEndPosition = 0;
 
-        var cachedStringStart = new char[IndexBlock.Data.CachedSymbolsCount];
+        var cachedStringStart = new char[IndexBlockData.CachedSymbolsCount];
         Array.Fill(cachedStringStart, PredefinedConstants.StringCacheFiller);
 
         const int stateRowStart = 0;
@@ -295,7 +295,7 @@ public static class IndexBlockParser
             numberEndPosition = 0;
         }
 
-        var result = new IndexBlock.Data(
+        var result = new IndexBlockData(
             cachedStringStart,
             numberStartPosition,
             numberEndPosition,
@@ -306,7 +306,7 @@ public static class IndexBlockParser
     }
 
     private static void WriteIndexBlock(
-        IndexBlock.Data block,
+        IndexBlockData block,
         FileStream targetFileStream,
         FileStream sourceFileStream,
         Encoding encoding,
@@ -334,7 +334,7 @@ public static class IndexBlockParser
         targetFileStream.Write(partsDelimiterBytes);
 
         var stringPartLength = block.StringEndPosition - block.StringStartPosition;
-        if (stringPartLength <= IndexBlock.Data.CachedSymbolsCount)
+        if (stringPartLength <= IndexBlockData.CachedSymbolsCount)
         {
             for (int s = 0; s < stringPartLength; ++s)
             {

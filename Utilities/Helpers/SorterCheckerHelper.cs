@@ -91,7 +91,7 @@ public static class SorterCheckerHelper
 
     private static void CheckRowsOrder(LongFileIndex target)
     {
-        var violationIndex = target.IsSorted(0, target.LongCount(), new IndexBlockComparer());
+        var violationIndex = target.IsSorted(0, target.LongCount(), new IndexBlockComparer(target));
         const string exceptionMessage = "Looks like target file was not sorted properly at row {0}.";
         if (0 <= violationIndex) throw new IOException(string.Format(exceptionMessage, violationIndex + 1));
         Console.WriteLine("Rows order is OK.");
@@ -99,11 +99,11 @@ public static class SorterCheckerHelper
 
     private static void CheckRowsAvailability(LongFileIndex source, LongFileIndex target)
     {
-        var comparer = new IndexBlockComparer();
+        var comparer = new IndexBlockComparer(source, target);
 
         for (long i = 0; i < source.LongCount(); ++i)
         {
-            var j = (target as ILargeList<IndexBlock>).BinarySearch(
+            var j = (target as ILargeList<IndexBlockData>).BinarySearch(
                 0,
                 target.LongCount(),
                 source[i],
@@ -117,8 +117,10 @@ public static class SorterCheckerHelper
 
     private static void CheckRowsOccurrences(LongFileIndex source, LongFileIndex target)
     {
-        var comparer = new IndexBlockComparer();
-        (source as ILargeList<IndexBlock>).Sort(0, source.LongCount(), comparer);
+        var sourceComparer = new IndexBlockComparer(source);
+        var targetComparer = new IndexBlockComparer(target);
+        var sourceAndTargetComparer = new IndexBlockComparer(source, target);
+        (source as ILargeList<IndexBlockData>).Sort(0, source.LongCount(), sourceComparer);
 
         var sourceIndex = 0;
         var targetIndex = 0;
@@ -130,7 +132,7 @@ public static class SorterCheckerHelper
 
             while (sourceEnd < source.LongCount())
             {
-                if (comparer.Compare(sourceElement, source[sourceEnd]) != 0) break;
+                if (sourceComparer.Compare(sourceElement, source[sourceEnd]) != 0) break;
                 ++sourceEnd;
             }
 
@@ -139,14 +141,14 @@ public static class SorterCheckerHelper
 
             while (targetEnd < target.LongCount())
             {
-                if (comparer.Compare(targetElement, target[targetEnd]) != 0) break;
+                if (targetComparer.Compare(targetElement, target[targetEnd]) != 0) break;
                 ++targetEnd;
             }
 
             const string messageAvailabilityException = "Looks like target contains row number {0}" +
                 " that is not present in source.";
 
-            if (comparer.Compare(sourceElement, targetElement) != 0)
+            if (sourceAndTargetComparer.Compare(sourceElement, targetElement) != 0)
                 throw new Exception(string.Format(messageAvailabilityException, targetIndex + 1));
 
             const string messageOccurrencesException = "Looks like target contains row number {0}" +
@@ -159,6 +161,8 @@ public static class SorterCheckerHelper
             targetIndex = targetEnd;
         }
 
+        source.Dispose();
+        target.Dispose();
         Console.WriteLine("Rows occurrences is OK.");
     }
 }
