@@ -182,6 +182,7 @@ public interface ILargeList<T>
             for (int i = 0; i < count; ++i) buffer[i] = this[leftBorder + i];
             Array.Sort(buffer, comparer);
             for (int i = 0; i < count; ++i) this[leftBorder + i] = buffer[i];
+            GC.Collect();
         }
     }
 }
