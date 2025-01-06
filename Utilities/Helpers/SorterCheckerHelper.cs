@@ -23,7 +23,6 @@ public static class SorterCheckerHelper
             SorterCheckerHelper.CheckEncodingBom(options);
             SorterCheckerHelper.CheckRowsCount(options, out source, out target);
             SorterCheckerHelper.CheckRowsOrder(target);
-            SorterCheckerHelper.CheckRowsAvailability(source, target);
             SorterCheckerHelper.CheckRowsOccurrences(source, target);
         }
         finally
@@ -105,24 +104,6 @@ public static class SorterCheckerHelper
         const string exceptionMessage = "Looks like target file was not sorted properly at row {0}.";
         if (0 <= violationIndex) throw new IOException(string.Format(exceptionMessage, violationIndex + 1));
         Console.WriteLine("Rows order is OK.");
-    }
-
-    private static void CheckRowsAvailability(LongFileIndex source, LongFileIndex target)
-    {
-        var comparer = new IndexBlockComparer(source, target);
-
-        for (long i = 0; i < source.LongCount(); ++i)
-        {
-            var j = (target as ILargeList<IndexBlockData>).BinarySearch(
-                0,
-                target.LongCount(),
-                source[i],
-                comparer);
-            if (j < 0)
-                throw new Exception($"Looks like target file does not contain row number {i + 1} from source file.");
-        }
-
-        Console.WriteLine("Rows availability is OK.");
     }
 
     private static void CheckRowsOccurrences(LongFileIndex source, LongFileIndex target)
