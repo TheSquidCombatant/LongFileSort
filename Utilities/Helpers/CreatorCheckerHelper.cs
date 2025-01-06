@@ -15,11 +15,20 @@ public static class CreatorCheckerHelper
     /// </summary>
     public static void Process(CreatorOptions options)
     {
-        CreatorCheckerHelper.ValidateCreatingOptions(options);
-        CreatorCheckerHelper.CheckFileSize(options);
-        CreatorCheckerHelper.CheckEncodingBom(options);
-        CreatorCheckerHelper.CheckRowsPattern(options, out var index);
-        CreatorCheckerHelper.CheckStringsDuplication(index);
+        LongFileIndex index = null;
+
+        try
+        {
+            CreatorCheckerHelper.ValidateCreatingOptions(options);
+            CreatorCheckerHelper.CheckFileSize(options);
+            CreatorCheckerHelper.CheckEncodingBom(options);
+            CreatorCheckerHelper.CheckRowsPattern(options, out index);
+            CreatorCheckerHelper.CheckStringsDuplication(index);
+        }
+        finally
+        {
+            index?.Dispose();
+        }
     }
 
     private static void ValidateCreatingOptions(CreatorOptions options)

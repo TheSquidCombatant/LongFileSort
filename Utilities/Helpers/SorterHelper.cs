@@ -14,8 +14,16 @@ public static class SorterHelper
     /// </summary>
     public static void Process(SorterOptions options)
     {
-        SorterHelper.ValidateSotringOptions(options);
-        SorterHelper.GenerateSortedFile(options);
+        try
+        {
+            SorterHelper.ValidateSotringOptions(options);
+            SorterHelper.GenerateSortedFile(options);
+        }
+        catch
+        {
+            if (File.Exists(options.TargetFilePath)) File.Delete(options.TargetFilePath);
+            throw;
+        }
     }
 
     private static void ValidateSotringOptions(SorterOptions options)

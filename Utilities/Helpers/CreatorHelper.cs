@@ -13,9 +13,17 @@ public static class CreatorHelper
     /// </summary>
     public static void Process(CreatorOptions options)
     {
-        CreatorHelper.ValidateCreatingOptions(options);
-        CreatorHelper.CreateRandomPart(options, out var randomStartSeed, out var createdRowsCount);
-        CreatorHelper.CreateDuplicationsPart(options, randomStartSeed, createdRowsCount);
+        try
+        {
+            CreatorHelper.ValidateCreatingOptions(options);
+            CreatorHelper.CreateRandomPart(options, out var randomStartSeed, out var createdRowsCount);
+            CreatorHelper.CreateDuplicationsPart(options, randomStartSeed, createdRowsCount);
+        }
+        catch
+        {
+            if (File.Exists(options.SourceFilePath)) File.Delete(options.SourceFilePath);
+            throw;
+        }
     }
 
     private static void ValidateCreatingOptions(CreatorOptions options)

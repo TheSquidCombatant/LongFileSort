@@ -15,12 +15,22 @@ public static class SorterCheckerHelper
     /// </summary>
     public static void Process(SorterOptions options)
     {
-        SorterCheckerHelper.ValidateSotringOptions(options);
-        SorterCheckerHelper.CheckEncodingBom(options);
-        SorterCheckerHelper.CheckRowsCount(options, out var source, out var target);
-        SorterCheckerHelper.CheckRowsOrder(target);
-        SorterCheckerHelper.CheckRowsAvailability(source, target);
-        SorterCheckerHelper.CheckRowsOccurrences(source, target);
+        LongFileIndex source = null, target = null;
+
+        try
+        {
+            SorterCheckerHelper.ValidateSotringOptions(options);
+            SorterCheckerHelper.CheckEncodingBom(options);
+            SorterCheckerHelper.CheckRowsCount(options, out source, out target);
+            SorterCheckerHelper.CheckRowsOrder(target);
+            SorterCheckerHelper.CheckRowsAvailability(source, target);
+            SorterCheckerHelper.CheckRowsOccurrences(source, target);
+        }
+        finally
+        {
+            source?.Dispose();
+            target?.Dispose();
+        }
     }
 
     private static void ValidateSotringOptions(SorterOptions options)
@@ -161,8 +171,6 @@ public static class SorterCheckerHelper
             targetIndex = targetEnd;
         }
 
-        source.Dispose();
-        target.Dispose();
         Console.WriteLine("Rows occurrences is OK.");
     }
 }
